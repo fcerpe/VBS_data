@@ -1,3 +1,10 @@
 [submodule "code/lib/bidspm"]
 	path = code/lib/bidspm
 	url = https://github.com/cpp-lln-lab/bidspm.git
+[submodule "inputs/VBS_datasets"]
+	path = inputs/VBS_datasets
+	url = git@gin.g-node.org:/fcerpe/VBS_datasets.git
+[submodule "inputs/archive"]
+	path = inputs/archive
+	url = ./inputs/archive
+	datalad-id = e89348dc-0989-4177-b9f2-7e4ae0b32a73
