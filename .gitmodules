@@ -8,3 +8,7 @@
 	path = inputs/archive
 	url = ./inputs/archive
 	datalad-id = e89348dc-0989-4177-b9f2-7e4ae0b32a73
+[submodule "inputs/datasets"]
+	path = inputs/datasets
+	url = git@gin.g-node.org:/fcerpe/VBS_datasets.git
+	datalad-url = git@gin.g-node.org:/fcerpe/VBS_datasets.git
