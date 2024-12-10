@@ -520,16 +520,13 @@ def copy_image(path, image, non_black, letter):
 # From given sizes and image, will create the 5 (actually 4) variations needed
 def resize_image(path, image, sizes, stim_info):
     
-    # Set desitantion folder
-    dest_folder = path.split("/", 1)[0]
-    
     # Assuming images passed are squared (they should be), use the original side 
     # to crop enlarged /shrank images
     resize_factor = image.width
     
     ## Make letter the same
     # Just adjust name and save original
-    cropped_savename = f'../../input/words/variations/{stim_info}S3.png'
+    cropped_savename = f'../../inputs/words/variations/{stim_info}S3.png'
     image.save(cropped_savename)
     
     
@@ -554,7 +551,7 @@ def resize_image(path, image, sizes, stim_info):
         cropped_image = bigger_image.crop((left, top, right, bottom))
         
         # Adjust filename to note the change
-        cropped_savename = f'../../input/words/variations/{stim_info}S{4+i}.png'
+        cropped_savename = f'../../inputs/words/variations/{stim_info}S{4+i}.png'
         
         # Save image
         cropped_image.save(cropped_savename)
@@ -587,14 +584,14 @@ def resize_image(path, image, sizes, stim_info):
         cropped_image = background.crop((left, top, right, bottom))
         
         # Adjust filename to note the change
-        cropped_savename = f'../../input/words/variations/{stim_info}S{2-i}.png'
+        cropped_savename = f'../../inputs/words/variations/{stim_info}S{2-i}.png'
         
         # Save image
         cropped_image.save(cropped_savename)
 
     
 # Thickening function
-# From a given image, will create 4 variations in thickness
+# From a given image, will create 5 (4 + original) variations in thickness
 def thicken_image(path, image, thicknesses, stim_info):
     
     # Set reference colors
@@ -623,7 +620,7 @@ def thicken_image(path, image, thicknesses, stim_info):
     
     # Save T3 image (mid-thickness, a.k.a. original format)
     black_image = Image.fromarray(image_array.astype('uint8'), 'RGB')
-    blackname = f'../../input/words/variations/{stim_info}_T3.png'
+    blackname = f'../../inputs/words/variations/{stim_info}_T3.png'
     black_image.save(blackname)
     
     
@@ -651,7 +648,7 @@ def thicken_image(path, image, thicknesses, stim_info):
         
         # save image in state-of-the-art folder with change notation
         colored_image = Image.fromarray(expand_array)
-        colored_savename = f'../../input/words/variations/{stim_info}_T{i+4}.png'
+        colored_savename = f'../../inputs/words/variations/{stim_info}_T{i+4}.png'
         colored_image.save(colored_savename)
         
         
@@ -722,5 +719,38 @@ def thicken_image(path, image, thicknesses, stim_info):
         
         # save image in state-of-the-art folder with change notation
         colored_image = Image.fromarray(shrink_array)
-        colored_savename = f'../../input/words/variations/{stim_info}_T{2-i}.png'
+        colored_savename = f'../../inputs/words/variations/{stim_info}_T{2-i}.png'
         colored_image.save(colored_savename)
+
+
+# Position variations
+# From an image, will create copies that are shifted on the x and y axes
+def shift_image(path, image, x_positions, y_positions, stim_info):
+
+    
+    # Loop through all combinations of x and y positions
+    for iX, x in enumerate(x_positions):
+        
+        for iY, y in enumerate(y_positions):
+            
+            # Create white image on which to paste the shifted word
+            canvas = Image.new("RGB", image.size, (255, 255, 255)) 
+            
+            # Paste the original image at the shifted position
+            canvas.paste(image, (x, y))
+            
+            # Add information to the name and save the image
+            shifted_savename = f'../../inputs/words/variations/{stim_info}X{iX+1}Y{iY+1}.png'
+            canvas.save(shifted_savename)
+            
+
+
+
+
+
+
+
+
+
+
+

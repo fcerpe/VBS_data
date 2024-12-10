@@ -29,23 +29,27 @@ from PIL import Image
 import stim_src as stim
 
 
-# Pick which stimuli to process
+## Find the raw letter images 
+# concatenate them in one 
 
-br_dir = "letters/braille" 
+br_dir = "../../inputs/letters/braille" 
 br_paths = glob.glob(os.path.join(br_dir, 'br_*.png'))
-ln_dir = "letters/line"
+ln_dir = "../../inputs/letters/line"
 ln_paths = glob.glob(os.path.join(ln_dir, 'ln_*.png'))
-lt_dir = "letters/latin"
+lt_dir = "../../inputs/letters/latin"
 lt_paths = glob.glob(os.path.join(lt_dir, 'lt_*.png'))
 
 letter_paths = br_paths + ln_paths + lt_paths
 
-# First, loop to create new variations:
-# t1 = -X steps
-# t2 = -Y steps 
+
+## Create the thickness variations
+# Legend
+# t1 = -6 steps
+# t2 = -3 steps 
 # t3 = original thickness
-# t4 = +Y steps
-# t5 = +X steps
+# t4 = +3 steps
+# t5 = +6 steps
+
 for path in letter_paths: 
     
     # Extract letter information to keep track of size changes
@@ -61,18 +65,14 @@ for path in letter_paths:
     stim.thicken_image(path, img, thicknesses, letter_info)
     
     
-## Then, take t1-t5 and create size variations 
-# Find the newly created thickness variations
-letter_dir = "letters/variations"
+## Add size variations 
+ 
+# Look for the new list of stimuli, the one that includes the newly created
+# T variations
+letter_dir = "../../inputs/letters/variations"
 letter_paths = glob.glob(os.path.join(letter_dir, '*.png'))
 
-## Then, variate the size of each letter
-# Loop will produce 5 size variations:
-# s1 = -X%
-# s2 = -Y%
-# s3 = original size
-# s4 = +Y%
-# s5 = +X%
+# Loop through all the new letters to create size (S) variations
 for path in letter_paths:
     
     # Extract script and letter to save the new image with the correct name
@@ -81,15 +81,20 @@ for path in letter_paths:
     # Open the image 
     img = Image.open(path).convert("RGB")
     
-    # Define the sizes (in percentage of increase, e.g. 20 -> 120% of original image size)
-    # IMPORTANT: put the sizes in increasing order, to avoid confusion in the naming of variations
+    ## Define size variations 
+    # s1 = - 30%
+    # s2 = - 15%
+    # s3 = original size
+    # s4 = + 15%
+    # s5 = + 30%
+    
+    # Define the sizes (in percentage of increase, e.g. 30 -> 130% of original image size)
+    # !! sizes must go in increasing order, to avoid naming confusion
     sizes = [15,30]
     
     # Resize the images and save them in 'letters/variations'. We just create 5/25 stimuli needed
     stim.resize_image(img, sizes, letter_info)
         
-
-
 
 
     

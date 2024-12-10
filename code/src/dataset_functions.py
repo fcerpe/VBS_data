@@ -13,7 +13,7 @@ import zipfile
 import glob
 import shutil
 import pandas as pd
-from stimuli_main import *
+
 
 # Create Dataset (folder structure)for Braille-Latin script associations
 # Save a zipped file in input/dataset_Braille.zip
@@ -22,10 +22,10 @@ def create_dataset_BR():
     print("Dataset of Latin-Braille words")
     
     # Classes - word list
-    words_path = '../../input/words/nl_wordlist.csv'
+    words_path = '../../inputs/words/nl_wordlist.csv'
     
     # Path to stored images
-    stimuli_folder = '../../input/words/stimuli'
+    stimuli_folder = '../../inputs/words/variations'
     
     print(f"Sorting images from {stimuli_folder} class folders ...")
     
@@ -33,8 +33,7 @@ def create_dataset_BR():
     scripts = ['br_', 'lt_']
     
     # Path to dataset structure
-    dataset_folder = '../../input/datasets/dataset_BR'
-    zip_folder = '../../input/datasets'
+    dataset_folder = '../../inputs/datasets/dataset_BR'
     
     # Read the CSV file
     df = pd.read_csv(words_path, header = None, names = ['classes'])
@@ -53,7 +52,7 @@ def create_dataset_BR():
         for image_name in os.listdir(stimuli_folder):
             
             # Check if the image starts with any allowed prefix and includes the class name
-            if any(image_name.startswith(script + class_name) for script in scripts):
+            if any(image_name.startswith(script + class_name + '_') for script in scripts):
                 
                 # Define source and destination paths
                 src_path = os.path.join(stimuli_folder, image_name)
@@ -72,10 +71,10 @@ def create_dataset_LN():
     print("Dataset of Latin-Line words")
     
     # Classes - word list
-    words_path = '../../input/words/nl_wordlist.csv'
+    words_path = '../../inputs/words/nl_wordlist.csv'
     
     # Path to stored images
-    stimuli_folder = '../../input/words/stimuli'
+    stimuli_folder = '../../inputs/words/variations'
     
     print(f"Sorting images from {stimuli_folder} class folders ...")
     
@@ -83,8 +82,7 @@ def create_dataset_LN():
     scripts = ['ln_', 'lt_']
     
     # Path to dataset structure
-    dataset_folder = '../../input/datasets/dataset_LN'
-    zip_folder = '../../input/datasets'
+    dataset_folder = '../../inputs/datasets/dataset_LN'
     
     # Read the CSV file
     df = pd.read_csv(words_path, header = None, names = ['classes'])
@@ -103,7 +101,7 @@ def create_dataset_LN():
         for image_name in os.listdir(stimuli_folder):
             
             # Check if the image starts with any allowed prefix and includes the class name
-            if any(image_name.startswith(script + class_name) for script in scripts):
+            if any(image_name.startswith(script + class_name + '_') for script in scripts):
                 
                 # Define source and destination paths
                 src_path = os.path.join(stimuli_folder, image_name)
@@ -119,10 +117,10 @@ def create_dataset_LN():
 def do_datasets_exist(): 
     
     # Define where to look for the datasets
-    folder_path = "../../input/datasets"
+    folder_path = "../../inputs/datasets"
 
     # Define the names to look for
-    file_names = {"dataset_LineBraille.zip", "dataset_Braille.zip"}
+    file_names = {"dataset_LN.zip", "dataset_BR.zip"}
 
     # Check if the files exist in the folder
     existing_files = {file for file in os.listdir(folder_path) if file in file_names}
@@ -134,7 +132,7 @@ def do_datasets_exist():
 def do_variations_exist():
     
     # Define the folder path
-    folder_path = '../../input/words/variations'
+    folder_path = '../../inputs/words/variations'
     
     # Define the search pattern
     search_pattern = os.path.join(folder_path, '*_T5S5.png')
@@ -203,4 +201,7 @@ def make_stimuli():
     else: 
         
         print('Datasets found. No need to create them')
+
+
+
 

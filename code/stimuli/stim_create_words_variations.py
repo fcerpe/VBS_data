@@ -5,29 +5,37 @@ Created on Tue Nov 12 10:41:33 2024
 
 @author: cerpelloni
 """
+import sys
+sys.path.append('../src')
 
 import os
 import glob
 from PIL import Image
 import stim_functions as stim
+import resize_images as ri
 
-# Find the words in the correct folders
 
-br_dir = "../../input/words/braille" 
+## Find the raw word images 
+# concatenate them in one 
+
+br_dir = "../../inputs/words/braille" 
 br_paths = glob.glob(os.path.join(br_dir, 'br_*.png'))
-ln_dir = "../../input/words/line"
+ln_dir = "../../inputs/words/line"
 ln_paths = glob.glob(os.path.join(ln_dir, 'ln_*.png'))
-lt_dir = "../../input/words/latin"
+lt_dir = "../../inputs/words/latin"
 lt_paths = glob.glob(os.path.join(lt_dir, 'lt_*.png'))
 
 word_paths = br_paths + ln_paths + lt_paths 
 
-# First, loop to create new variations:
-# t1 = -X steps
-# t2 = -Y steps 
+
+## Create the thickness variations
+# Legend
+# t1 = -6 steps
+# t2 = -3 steps 
 # t3 = original thickness
-# t4 = +Y steps
-# t5 = +X steps
+# t4 = +3 steps
+# t5 = +6 steps
+
 for path in word_paths: 
     
     # Extract letter information to keep track of size changes
@@ -44,18 +52,14 @@ for path in word_paths:
     stim.thicken_image(path, img, thicknesses, word_info)
     
     
-## Then, take t1-t5 and create size variations 
-# Find the newly created thickness variations
-word_dir = "../../input/words/variations"
+## Add size variations 
+ 
+# Look for the new list of stimuli, the one that includes the newly created
+# T variations
+word_dir = "../../inputs/words/variations"
 word_paths = glob.glob(os.path.join(word_dir, '*T[0-9].png'))
 
-## Then, variate the size of each letter
-# Loop will produce 5 size variations:
-# s1 = -X%
-# s2 = -Y%
-# s3 = original size
-# s4 = +Y%
-# s5 = +X%
+# Loop through all the new words to create size (S) variations
 for path in word_paths:
     
     # Extract script and letter to save the new image with the correct name
@@ -64,15 +68,59 @@ for path in word_paths:
     # Open the image 
     img = Image.open(path).convert("RGB")
     
-    # Define the sizes (in percentage of increase, e.g. 20 -> 120% of original image size)
-    # IMPORTANT: put the sizes in increasing order, to avoid confusion in the naming of variations
+    ## Define size variations 
+    # s1 = - 30%
+    # s2 = - 15%
+    # s3 = original size
+    # s4 = + 15%
+    # s5 = + 30%
+    
+    # Define the sizes (in percentage of increase, e.g. 30 -> 130% of original image size)
+    # !! sizes must go in increasing order, to avoid naming confusion
     sizes = [15,30]
     
-    # Resize the images and save them in 'letters/variations'. We just create 5/25 stimuli needed
+    # Resize the images and save them in 'letters/variations'
     stim.resize_image(path, img, sizes, word_info)
     
-    # After all the manipulations, cast the images to be 1000x1000 pixels
     
+## Resize the images to be 1000x1000 pixels, to constrain their expansion 
+
+# Overwrite images casting them to a specific size
+ri.resize_word_stimuli(1100, '../../inputs/words/variations', False)
+
+
+## Add position variations
+
+# Refresh list to include all the variations T*S*
+word_dir = "../../inputs/words/variations"
+word_paths = glob.glob(os.path.join(word_dir, '*S[0-9].png'))
+
+# Loop through all the words again to create horizontal (X) and vertical (Y) variations
+for path in word_paths:
     
-    # Move them in ../../input/words/stimuli
+    # Extract script and letter to save the new image with the correct name
+    word_info = stim.parce_filename(path)
     
+    # Open the image 
+    img = Image.open(path).convert("RGB")
+    
+    ## Define horizontal variations 
+    #  X1  X2  X3  X4  X5  X6  X7  
+    # -45 -30 -15   0  15  30  45  
+    x_positions = [-45, -30, -15, 0, 15, 30, 45]
+    
+    ## Define vertical variations 
+    #  Y1  Y2  Y3  Y4  Y5
+    # -40 -20   0  20  40
+    y_positions = [-40, -20, 0, 20, 40]
+    
+    # Shift the imges on the x-axis 
+    stim.shift_image(path, img, x_positions, y_positions, word_info)
+    
+
+
+
+
+
+
+

@@ -34,6 +34,14 @@ from PIL import Image
 
 from datetime import datetime
 
+import subprocess
+
+### ---------------------------------------------------------------------------
+### WORKING DIRECOTRY
+
+path = subprocess.run(['pwd'], stdout=subprocess.PIPE, text=True)
+os.chdir(path.stdout[:-1])
+
 
 ### ---------------------------------------------------------------------------
 ### DATASET 
@@ -48,15 +56,10 @@ transform = transforms.Compose([transforms.Resize((224, 224)),
 
 
 # Load the Dataset from a structure of folders - BRAILLE 
-dataset = torchvision.datasets.ImageFolder(root = '../../input/datasets/dataset_BR/', transform = transform)
+dataset = torchvision.datasets.ImageFolder(root = '../../inputs/datasets/dataset_BR/', transform = transform)
 
 # Get the classes / labels for each word
-word_classes = pd.read_csv('../../input/words/en_wordlist.csv', header = None).values.tolist()
-
-# Temporarily limit the classs to only letter A
-# Extract words form sublists
-word_classes = word_classes[0:53]
-word_classes = [word[0] for word in word_classes]
+word_classes = pd.read_csv('../../inputs/words/nl_wordlist.csv', header = None).values.tolist()
 
 # Split into training and validation
 train_size = int(0.8 * len(dataset))
@@ -67,7 +70,7 @@ train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size,
 train_loader = DataLoader(train_dataset, batch_size = 64, shuffle = True)
 val_loader = DataLoader(val_dataset, batch_size = 64, shuffle = False)
 
-# Dataset sanity check: visualize words
+# Dataset sanity check: visualize some stimuli
 sanity_check_dataset(train_loader)
 
 
@@ -224,7 +227,7 @@ print(f"Using {device} device")
 
 ## Train the network
 # It will (hopefully) learn to associate Latin and Braille words based on their "semantic" meaning
-for e in enumerate(epochs):
+for e in range(epochs):
     
     # Train the network for one epoch
     # Obtain:
