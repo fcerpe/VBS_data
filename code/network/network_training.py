@@ -11,9 +11,9 @@ Network training script
 # Import everything, even other folders
 import sys
 
-sys.path.append('../src')
+sys.path.append('../')
 
-from activation_extraction import *
+from src.activation_extraction import *
 from network_functions import *
 
 import os, glob, json, urllib
@@ -56,7 +56,7 @@ transform = transforms.Compose([transforms.Resize((224, 224)),
 
 
 # Load the Dataset from a structure of folders - BRAILLE 
-dataset = torchvision.datasets.ImageFolder(root = '../../inputs/datasets/dataset_BR/', transform = transform)
+dataset = torchvision.datasets.ImageFolder(root = '../../inputs/datasets/LT/', transform = transform)
 
 # Get the classes / labels for each word
 word_classes = pd.read_csv('../../inputs/words/nl_wordlist.csv', header = None).values.tolist()
@@ -202,7 +202,7 @@ def validate(model, loader, loss_fn, device):
 
 ## Define hyperparameters
 # Epochs: number of times that a network passes through training
-epochs = 1
+epochs = 10
 
 # Learning rate: to which extent the network parameters are updated for each batch / epoch
 learning_rate = 1e-3
@@ -216,6 +216,12 @@ momentum = .9
 # Optimizer: different functions in pytorch
 optimizer = torch.optim.SGD(alexnet.parameters(), lr = learning_rate, momentum = momentum)
 
+# Trackers to monitor training progression
+train_losses = []
+train_counter = []
+val_losses = []
+val_counter = []
+
 
 ## Check your device
 # Training on GPU (a.k.a. 'cuda') is faster, use it if available
@@ -223,7 +229,7 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 # Let the user know
 print(f"Using {device} device")
-
+print("Training started at:", datetime.now())
 
 ## Train the network
 # It will (hopefully) learn to associate Latin and Braille words based on their "semantic" meaning
@@ -236,12 +242,22 @@ for e in range(epochs):
     # - total accuracy
     train_total, train_loss, train_accuracy = train(alexnet, train_loader, optimizer, loss_fn, device)    
     
+    # Track loss progression, for visualization
+    train_losses.append(train_loss)
+    train_counter.append(e)
+    
+    
     # Validation
     # Obtain:
     # - total number of batches ran (for visualization)
     # - total losses
     # - total accuracy
     val_total, val_loss, val_accuracy = validate(alexnet, val_loader, loss_fn, device)
+    
+    # Track loss progression, for visualization
+    val_losses.append(val_loss)
+    val_counter.append(e)
+    
     
     # Print report
     print(f"Epoch {e+1}")
@@ -251,8 +267,13 @@ for e in range(epochs):
     # Save current state of the training
     torch.save(alexnet.state_dict(), f"model-{model_name}_epoch-{e+1}.pth")
     
+    print(f"Epoch {e+1} ended at: ", datetime.now())
+    
+
+
+    
 # Visualize how the training went
-visualize_training_progress(train_total, train_loss, val_total, val_loss)    
+visualize_training_progress(train_counter, train_loss, val_counter, val_loss)    
 
 
 

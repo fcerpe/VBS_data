@@ -15,9 +15,60 @@ import shutil
 import pandas as pd
 
 
+
 # Create Dataset (folder structure)for Braille-Latin script associations
 # Save a zipped file in input/dataset_Braille.zip
-def create_dataset_BR(): 
+def create_dataset_LT(): 
+    
+    print("Dataset of Latin words only")
+    
+    # Classes - word list
+    words_path = '../../inputs/words/nl_wordlist.csv'
+    
+    # Path to stored images
+    stimuli_folder = '../../inputs/words/variations'
+    
+    print(f"Sorting images from {stimuli_folder} class folders ...")
+    
+    # Define the scripts to match and copy
+    scripts = ['_F1', '_F2', '_F3', '_F4']
+    
+    # Path to dataset structure
+    dataset_folder = '../../inputs/datasets/LT'
+    
+    # Read the CSV file
+    df = pd.read_csv(words_path, header = None, names = ['classes'])
+    
+    # Ensure destination folder exists
+    os.makedirs(dataset_folder, exist_ok = True)
+    
+    # Iterate over each class name
+    for class_name in df['classes']:
+        
+        # Create a subfolder for each class
+        class_folder = os.path.join(dataset_folder, class_name)
+        os.makedirs(class_folder, exist_ok = True)
+        
+        # Find and selectively move images matching the class name and allowed scripts
+        for image_name in os.listdir(stimuli_folder):
+            
+            # Check if the image starts with any allowed prefix and includes the class name
+            if any(image_name.startswith(class_name + script) for script in scripts):
+                
+                # Define source and destination paths
+                src_path = os.path.join(stimuli_folder, image_name)
+                dest_path = os.path.join(class_folder, image_name)
+                    
+                # Copy the image to the class folder
+                shutil.copy(src_path, dest_path)
+    
+    print("Images sorted into class folders \n")
+
+
+
+# Create Dataset (folder structure)for Braille-Latin script associations
+# Save a zipped file in input/dataset_Braille.zip
+def create_dataset_BRLT(): 
     
     print("Dataset of Latin-Braille words")
     
@@ -33,7 +84,7 @@ def create_dataset_BR():
     scripts = ['br_', 'lt_']
     
     # Path to dataset structure
-    dataset_folder = '../../inputs/datasets/dataset_BR'
+    dataset_folder = '../../inputs/datasets/BR_LT'
     
     # Read the CSV file
     df = pd.read_csv(words_path, header = None, names = ['classes'])
@@ -64,9 +115,10 @@ def create_dataset_BR():
     print("Images sorted into class folders \n")
 
 
+
 # Create Dataset (folder structure) for Latin-Line script
 # Save a zipped file in input/dataset_LineBraille.zip
-def create_dataset_LN(): 
+def create_dataset_LNLT(): 
     
     print("Dataset of Latin-Line words")
     
@@ -82,7 +134,7 @@ def create_dataset_LN():
     scripts = ['ln_', 'lt_']
     
     # Path to dataset structure
-    dataset_folder = '../../inputs/datasets/dataset_LN'
+    dataset_folder = '../../inputs/datasets/LN_LT'
     
     # Read the CSV file
     df = pd.read_csv(words_path, header = None, names = ['classes'])
@@ -113,6 +165,7 @@ def create_dataset_LN():
     print("Images sorted into class folders \n")
     
 
+
 # Check whether the datasets exists. If no, make them
 def do_datasets_exist(): 
     
@@ -126,6 +179,8 @@ def do_datasets_exist():
     existing_files = {file for file in os.listdir(folder_path) if file in file_names}
     
     return existing_files
+
+
 
 # Check if the stimuli are created in all their variations 
 # (to avoid re-running that long script)
@@ -144,6 +199,7 @@ def do_variations_exist():
     count = len(images)
     
     return count == 1000
+
 
 
 # Load the datasets 
@@ -174,6 +230,7 @@ def load_dataset(dataset):
         return f"An error occurred while unzipping: {e}"
 
 
+
 # Make the datasets from scratch
 def make_stimuli(): 
     
@@ -187,8 +244,8 @@ def make_stimuli():
             
             print('Found images. Organizing them ...')
             # Create the datasets from the images already created
-            create_dataset_BR()
-            create_dataset_LN()
+            create_dataset_BRLT()
+            create_dataset_LNLT()
             
         else:
             

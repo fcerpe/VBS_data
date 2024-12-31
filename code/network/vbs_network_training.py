@@ -174,7 +174,7 @@ def train_loop(dataloader, net, loss_fn, optimizer, epoch):
         optimizer.step()
         optimizer.zero_grad()
         
-        #track the losses for visualization
+        # track the losses for visualization
         if batch % 10 == 0:
             train_losses.append(loss.item())
             train_counter.append((batch * 64) + (epoch*len(dataloader.dataset)))
