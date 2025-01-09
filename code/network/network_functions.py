@@ -6,12 +6,165 @@ Created on Fri Nov 15 16:15:36 2024
 @author: cerpelloni
 """
 
+import os, glob, json, urllib
+
 import torch
-import torchvision.models as models
 import torch.nn as nn
 import torchvision
-import matplotlib.pyplot as plt
+import torchvision.transforms as transforms
+import torchvision.models as models
+from torch.utils.data import Dataset, DataLoader
+from torch.utils.tensorboard import SummaryWriter
+
+import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from PIL import Image
+
+from datetime import datetime
+
+import subprocess
+
+
+### ---------------------------------------------------------------------------
+### DATASET FUNCTIONS
+
+# Import a dataset and the wordlist (always the same)
+# Needs speification of dataset, with path
+def import_dataset(path): 
+
+    # Define transformations that will be applied to images 
+    # - resize to 224x224 (alexnet input)
+    # - convert to tensor
+    # - normalize with ImageNet stats
+    transform = transforms.Compose([transforms.Resize((224, 224)),  
+                                    transforms.ToTensor(),
+                                    transforms.Normalize(mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225]) ])
+    
+    
+    # Load the Dataset from a structure of folders 
+    dataset = torchvision.datasets.ImageFolder(root = path, transform = transform)
+
+    # Get the classes / labels for each word
+    word_classes = pd.read_csv('../../inputs/words/nl_wordlist.csv', header = None).values.tolist()
+
+    return dataset, word_classes
+
+
+# Split the dataset into training and validation
+# then creates batches through Dataloader
+def load_dataset(dataset): 
+
+    # Split into training and validation
+    train_size = int(0.7 * len(dataset))
+    val_size = len(dataset) - train_size
+    train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
+    
+    # Use DataLoader to create batches
+    train_loader = DataLoader(train_dataset, batch_size = 64, shuffle = True)
+    val_loader = DataLoader(val_dataset, batch_size = 64, shuffle = False)
+
+    return train_loader, val_loader
+
+
+### ---------------------------------------------------------------------------
+### TRAINING, VALIDATION FUNCTIONS
+
+## Train the network for one epoch
+# Take as input:
+# - the network
+# - the data
+# - hyperparameters: optimizer and loss function
+# - device, where to run the training (GPU is possible)
+def train(model, loader, optimizer, loss_fn, device):
+    
+    # Setting the network to training mode (net.train) allows the gradients to be computed,
+    # and activates training-specific features (dropout, batch normalization) to prevent overfitting
+    model.train()
+    
+    # Initialize parameters to compute loss and accuracy
+    running_loss = 0.0
+    correct = 0
+    total = 0
+
+    # For all the batches
+    for inputs, labels in loader:
+    
+        inputs, labels = inputs.to(device), labels.to(device)
+
+        # Zero the gradients for this batch
+        optimizer.zero_grad()
+        
+        # Make prediction of class based on image
+        outputs = model(inputs)
+        
+        # Compute loss and gradients for this batch
+        loss = loss_fn(outputs, labels)
+        loss.backward()
+        
+        # Adjust learning weigths
+        optimizer.step()
+
+        ## Collect data on the batch
+        # Add this batch's loss to the total loss for the epoch
+        running_loss += loss.item() * inputs.size(0)
+        
+        # Store predicted classes
+        _, predicted = outputs.max(1)
+        
+        # Add this batch's predictions to the total ones
+        correct += predicted.eq(labels).sum().item()
+        
+        # Accumulate total samples 
+        total += labels.size(0)
+
+    # Compute the loss and the accuracy for the whole epoch
+    epoch_loss = running_loss / total
+    accuracy = correct / total
+    
+    return total, epoch_loss, accuracy
+            
+        
+## Validate the learning at a given epoch
+# Needs as input the same parameters of 'train' but the optimizer, as there is 
+# no adjustment of the weights
+def validate(model, loader, loss_fn, device):
+    
+    # Set the model to the evaluation mode
+    model.eval()
+    
+    # Initialize parameters to compute loss and accuracy
+    running_loss = 0.0
+    correct = 0
+    total = 0
+
+    # Disable gradient tracking, to avoid changes in the state of the training 
+    with torch.no_grad():
+        
+        for inputs, labels in loader:
+            
+            inputs, labels = inputs.to(device), labels.to(device)
+
+            # Predict the image classes and update the loss for this batch
+            outputs = model(inputs)
+            loss = loss_fn(outputs, labels)
+
+            # Keep track of running loss and prediction accuracy 
+            running_loss += loss.item() * inputs.size(0)
+            _, predicted = outputs.max(1)
+            correct += predicted.eq(labels).sum().item()
+            total += labels.size(0)
+
+    # Compute the loss and the accuracy for the whole epoch
+    epoch_loss = running_loss / total
+    accuracy = correct / total
+    
+    return total, epoch_loss, accuracy
+
+
+### ---------------------------------------------------------------------------
+### SUPPORT FUNCTIONS
 
 # Helper function for sanity_check_dataset
 def visualize_dataset_imgs(img, one_channel = False):
@@ -24,6 +177,7 @@ def visualize_dataset_imgs(img, one_channel = False):
         plt.imshow(npimg, cmap="Greys")
     else:
         plt.imshow(np.transpose(npimg, (1, 2, 0)))
+
 
 # Visualize some transformed stimuli from the train set, to make sure everything is in order
 def sanity_check_dataset(train_loader): 
@@ -53,10 +207,11 @@ def reset_last_layer(model, num_classes):
     
     # Unfreeze the layers
     for param in model.parameters():
-        param.requires_grad = False
+        param.requires_grad = True
+        
+    return model
     
     
-
 # Save the weights at a give epoch
 def save_epoch(): 
     
@@ -65,7 +220,7 @@ def save_epoch():
 
 # Visualize training progress over the number of batches 
 # Need to extract train_counter, test_counter which are train total and val total
-def visualize_training_progress(train_counter, train_loss, val_counter, val_loss): 
+def visualize_training_progress(train_counter, train_loss, val_counter, val_loss, filename): 
     
     fig = plt.figure()
     plt.plot(train_counter, train_loss, color = 'cornflowerblue', linewidth = 1.5)
@@ -73,7 +228,12 @@ def visualize_training_progress(train_counter, train_loss, val_counter, val_loss
     plt.legend(['Train Loss', 'Validation Loss'], loc = 'upper right')
     plt.xlabel('number of training examples seen')
     plt.ylabel('negative log likelihood loss')
+    
+    plt.savefig('f{filename}.png', dpi = 300, bbox_inches='tight')  
+
     plt.show()
+    
+    
     
     
     

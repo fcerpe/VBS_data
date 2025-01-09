@@ -36,12 +36,6 @@ from datetime import datetime
 
 import subprocess
 
-### ---------------------------------------------------------------------------
-### WORKING DIRECOTRY
-
-path = subprocess.run(['pwd'], stdout=subprocess.PIPE, text=True)
-os.chdir(path.stdout[:-1])
-
 
 ### ---------------------------------------------------------------------------
 ### DATASET 
@@ -62,7 +56,7 @@ dataset = torchvision.datasets.ImageFolder(root = '../../inputs/datasets/LT/', t
 word_classes = pd.read_csv('../../inputs/words/nl_wordlist.csv', header = None).values.tolist()
 
 # Split into training and validation
-train_size = int(0.8 * len(dataset))
+train_size = int(0.7 * len(dataset))
 val_size = len(dataset) - train_size
 train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
 
@@ -205,13 +199,13 @@ def validate(model, loader, loss_fn, device):
 epochs = 10
 
 # Learning rate: to which extent the network parameters are updated for each batch / epoch
-learning_rate = 1e-3
+learning_rate = 1e-4
 
 # Loss function: different functions available in pytorch
 loss_fn = nn.CrossEntropyLoss() 
 
 # Momentum: nudge the optimezer in towards strongest gradient ove multiple steps
-momentum = .9
+momentum = .5
 
 # Optimizer: different functions in pytorch
 optimizer = torch.optim.SGD(alexnet.parameters(), lr = learning_rate, momentum = momentum)
@@ -265,15 +259,18 @@ for e in range(epochs):
     print(f"Validation - Loss: {val_loss:.4f}, Accuracy: {val_accuracy:.4f}")
     
     # Save current state of the training
-    torch.save(alexnet.state_dict(), f"model-{model_name}_epoch-{e+1}.pth")
+    filename = f"model-{model_name}_lr-{learning_rate}_mom-{momentum}_bsize-64"
+    torch.save(alexnet.state_dict(), f"{filename}_epoch-{e+1}.pth")
     
     print(f"Epoch {e+1} ended at: ", datetime.now())
     
-
-
     
 # Visualize how the training went
-visualize_training_progress(train_counter, train_loss, val_counter, val_loss)    
+visualize_training_progress(train_counter, 
+                            train_losses, 
+                            val_counter, 
+                            val_losses, 
+                            filename)    
 
 
 

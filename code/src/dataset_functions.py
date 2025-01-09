@@ -81,7 +81,7 @@ def create_dataset_BRLT():
     print(f"Sorting images from {stimuli_folder} class folders ...")
     
     # Define the scripts to match and copy
-    scripts = ['br_', 'lt_']
+    scripts = ['_F1', '_F2', '_F3', '_F4', '_F5']
     
     # Path to dataset structure
     dataset_folder = '../../inputs/datasets/BR_LT'
@@ -103,7 +103,7 @@ def create_dataset_BRLT():
         for image_name in os.listdir(stimuli_folder):
             
             # Check if the image starts with any allowed prefix and includes the class name
-            if any(image_name.startswith(script + class_name + '_') for script in scripts):
+            if any(image_name.startswith(class_name + script) for script in scripts):
                 
                 # Define source and destination paths
                 src_path = os.path.join(stimuli_folder, image_name)
@@ -131,7 +131,7 @@ def create_dataset_LNLT():
     print(f"Sorting images from {stimuli_folder} class folders ...")
     
     # Define the scripts to match and copy
-    scripts = ['ln_', 'lt_']
+    scripts = ['_F1', '_F2', '_F3', '_F4', '_F6']
     
     # Path to dataset structure
     dataset_folder = '../../inputs/datasets/LN_LT'
@@ -153,7 +153,7 @@ def create_dataset_LNLT():
         for image_name in os.listdir(stimuli_folder):
             
             # Check if the image starts with any allowed prefix and includes the class name
-            if any(image_name.startswith(script + class_name + '_') for script in scripts):
+            if any(image_name.startswith(class_name + script) for script in scripts):
                 
                 # Define source and destination paths
                 src_path = os.path.join(stimuli_folder, image_name)
@@ -173,7 +173,7 @@ def do_datasets_exist():
     folder_path = "../../inputs/datasets"
 
     # Define the names to look for
-    file_names = {"dataset_LN.zip", "dataset_BR.zip"}
+    file_names = {"dataset_LNLT.zip", "dataset_BRLT.zip"}
 
     # Check if the files exist in the folder
     existing_files = {file for file in os.listdir(folder_path) if file in file_names}
