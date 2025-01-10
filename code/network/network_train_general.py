@@ -84,14 +84,9 @@ alexnet = nn.DataParallel(alexnet)
 alexnet.eval()
 model_name = 'alexnet'
 
-# Load ImageNet class names 
-# for classification purposes, not relevant at the moment
-url = "https://raw.githubusercontent.com/anishathalye/imagenet-simple-labels/master/imagenet-simple-labels.json"
-imagenet_classes = json.loads(urllib.request.urlopen(url).read().decode())
-
 # Reset last layer (classifier) for new training
 # Does not work, deletes the network
-# alexnet = reset_last_layer_AN(alexnet, len(word_classes))
+alexnet = reset_last_layer(alexnet, len(word_classes))
 
 
 ### ---------------------------------------------------------------------------
