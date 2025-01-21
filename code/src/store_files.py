@@ -16,9 +16,7 @@ import csv
 import subprocess
 import zipfile
 
-## ZIP FILES TOGETHER
-# Used in variations, to create zip files containing all the stimuli for a class
-# e.g. br_aai_T*S*X*Y* ln_aai_T*S*X*Y* lt_aai_T*S*X*Y* -> aai.zip
+
 def zip_files(folder_path, wordlist):
     
     # Ensure the folder exists
@@ -104,10 +102,16 @@ def unzip_files(parent_folder):
 
 
 
+### Extract cloned zip files
+# after datald clone and get, actually get the images to train the networks
+# lt_path = '/data/Filippo/inputs/datasets/LT'
+# unzip_files(lt_path)
 
+brlt_path = '../../inputs/datasets/BR_LT'
+unzip_files(brlt_path)
 
-
-
+lnlt_path = '../../inputs/datasets/LN_LT'
+unzip_files(lnlt_path)
 
 
 

@@ -62,8 +62,8 @@ def load_dataset(dataset):
     train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
     
     # Use DataLoader to create batches
-    train_loader = DataLoader(train_dataset, batch_size = 64, shuffle = True)
-    val_loader = DataLoader(val_dataset, batch_size = 64, shuffle = False)
+    train_loader = DataLoader(train_dataset, batch_size = 100, shuffle = True)
+    val_loader = DataLoader(val_dataset, batch_size = 100, shuffle = False)
 
     return train_loader, val_loader
 
@@ -222,6 +222,9 @@ def save_epoch():
 # Need to extract train_counter, test_counter which are train total and val total
 def visualize_training_progress(train_counter, train_loss, val_counter, val_loss, filename): 
     
+    path = '../../outputs/figures/literate/latin/'
+    fullpath = f"{path}{filename}"
+    
     fig = plt.figure()
     plt.plot(train_counter, train_loss, color = 'cornflowerblue', linewidth = 1.5)
     plt.scatter(val_counter, val_loss, zorder = 5, color = 'darkred')         
@@ -229,7 +232,7 @@ def visualize_training_progress(train_counter, train_loss, val_counter, val_loss
     plt.xlabel('number of training examples seen')
     plt.ylabel('negative log likelihood loss')
     
-    plt.savefig('f{filename}.png', dpi = 300, bbox_inches='tight')  
+    plt.savefig(f"{fullpath}.png", dpi = 300, bbox_inches='tight')  
 
     plt.show()
     

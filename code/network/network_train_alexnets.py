@@ -42,8 +42,9 @@ import subprocess
 
 # Get the dataset from the image structure
 # (also returns 1000 word categories)
-latin, word_classes = import_dataset('../../inputs/datasets/LT/')
+latin, word_classes = import_dataset('/data/Filippo/inputs/datasets/LT/')
 
+# Loading of the dataset and division in training and validation sets is done in the itreation loop, to randomize batches
 
 ### ---------------------------------------------------------------------------
 ### ITERATIONS 
@@ -52,25 +53,24 @@ latin, word_classes = import_dataset('../../inputs/datasets/LT/')
 # Batches, training, will slightly differ between networks 
 
 # Number of iterations
-subjects = 5 
+subjects = 5
 
 ## Define hyperparameters
 # Epochs: number of times that a network passes through training
 epochs = 10
 
 # Learning rate: to which extent the network parameters are updated for each batch / epoch
-learning_rate = 1e-3
+learning_rate = 1e-4
 
 # Loss function: different functions available in pytorch
 loss_fn = nn.CrossEntropyLoss() 
 
 # Momentum: nudge the optimezer in towards strongest gradient ove multiple steps
-momentum = .9
+# Not implemented after latest pilots
+# If needed, momentum = 0
 
-# Optimizer: different functions in pytorch
-optimizer = torch.optim.SGD(alexnet.parameters(), lr = learning_rate, momentum = momentum)
-
-
+# Path where to store the weights
+path = '../../outputs/weights/literate/latin/'
 
 for s in range(subjects): 
     
@@ -100,6 +100,10 @@ for s in range(subjects):
     # Reset last layer (classifier) for new training
     alexnet = reset_last_layer(alexnet, len(word_classes))
 
+
+    # Optimizer: different functions in pytorch
+    optimizer = torch.optim.SGD(alexnet.parameters(), lr =  learning_rate)
+
     ## ---------------------------------------------------------------------------
     ## TRAIN THE NETWORK
 
@@ -114,6 +118,8 @@ for s in range(subjects):
 
     # Check your device - GPU (a.k.a. 'cuda') is faster, use it if available
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    
+    alexnet.to(device)
 
     # Notify the user 
     print(f"Using {device} device")
@@ -138,12 +144,15 @@ for s in range(subjects):
         val_counter.append(e)
         
         # Print report
+        print("\n\n")
+        print(f"SUBJECT {s+1}\n")
         print(f"Epoch {e+1}")
         print(f"Training - Loss: {train_loss:.4f}, Accuracy: {train_accuracy:.4f}")
         print(f"Validation - Loss: {val_loss:.4f}, Accuracy: {val_accuracy:.4f}")
         
         # Save current state of the training
-        torch.save(alexnet.state_dict(), f"{filename}_epoch-{e+1}.pth")
+        fullpath = f"{path}{filename}"
+        torch.save(alexnet.state_dict(), f"{fullpath}_epoch-{e+1}.pth")
         
         print(f"Epoch {e+1} ended at: ", datetime.now())
     
@@ -151,8 +160,10 @@ for s in range(subjects):
     ## ------------------------------------------------------------------------
     ## VISUALZIE TRAINING
     
-    visualize_training_progress(train_counter, train_losses, 
-                                val_counter, val_losses, 
+    visualize_training_progress(train_counter,
+                                train_losses, 
+                                val_counter, 
+                                val_losses, 
                                 filename)    
 
 

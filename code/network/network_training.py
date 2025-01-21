@@ -36,6 +36,12 @@ from datetime import datetime
 
 import subprocess
 
+### ---------------------------------------------------------------------------
+### WORKING DIRECOTRY
+
+path = subprocess.run(['pwd'], stdout=subprocess.PIPE, text=True)
+os.chdir(path.stdout[:-1])
+
 
 ### ---------------------------------------------------------------------------
 ### DATASET 
@@ -61,8 +67,8 @@ val_size = len(dataset) - train_size
 train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
 
 # Use DataLoader to create batches
-train_loader = DataLoader(train_dataset, batch_size = 100, shuffle = True)
-val_loader = DataLoader(val_dataset, batch_size = 100, shuffle = False)
+train_loader = DataLoader(train_dataset, batch_size = 64, shuffle = True)
+val_loader = DataLoader(val_dataset, batch_size = 64, shuffle = False)
 
 # Dataset sanity check: visualize some stimuli
 sanity_check_dataset(train_loader)
@@ -83,6 +89,11 @@ alexnet = nn.DataParallel(alexnet)
 # evaluate the model, just to check
 alexnet.eval()
 model_name = 'alexnet'
+
+# Load ImageNet class names 
+# for classification purposes, not relevant at the moment
+url = "https://raw.githubusercontent.com/anishathalye/imagenet-simple-labels/master/imagenet-simple-labels.json"
+imagenet_classes = json.loads(urllib.request.urlopen(url).read().decode())
 
 # Reset last layer (classifier) for new training
 # Does not work, deletes the network
@@ -200,10 +211,10 @@ learning_rate = 1e-4
 loss_fn = nn.CrossEntropyLoss() 
 
 # Momentum: nudge the optimezer in towards strongest gradient ove multiple steps
-momentum = 0
+momentum = .4
 
 # Optimizer: different functions in pytorch
-optimizer = torch.optim.SGD(alexnet.parameters(), lr = learning_rate)
+optimizer = torch.optim.SGD(alexnet.parameters(), lr = learning_rate, momentum = momentum)
 
 # Trackers to monitor training progression
 train_losses = []
@@ -217,6 +228,7 @@ val_counter = []
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 alexnet.to(device)
+
 
 # Let the user know
 print(f"Using {device} device")
@@ -256,18 +268,13 @@ for e in range(epochs):
     print(f"Validation - Loss: {val_loss:.4f}, Accuracy: {val_accuracy:.4f}")
     
     # Save current state of the training
-    filename = f"model-{model_name}_lr-{learning_rate}_mom-{momentum}_bsize-100"
-    torch.save(alexnet.state_dict(), f"{filename}_epoch-{e+1}.pth")
+    torch.save(alexnet.state_dict(), f"model-{model_name}_lr-{learning_rate}_mom-none_bsize-64_epoch-{e+1}.pth")
     
     print(f"Epoch {e+1} ended at: ", datetime.now())
     
     
 # Visualize how the training went
-visualize_training_progress(train_counter, 
-                            train_losses, 
-                            val_counter, 
-                            val_losses, 
-                            filename)    
+visualize_training_progress(train_counter, train_losses, val_counter, val_losses)    
 
 
 
