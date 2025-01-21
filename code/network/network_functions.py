@@ -6,7 +6,7 @@ Created on Fri Nov 15 16:15:36 2024
 @author: cerpelloni
 """
 
-import os, glob, json, urllib
+import os, glob, json, urllib, csv
 
 import torch
 import torch.nn as nn
@@ -26,13 +26,202 @@ from datetime import datetime
 
 import subprocess
 
+### ---------------------------------------------------------------------------
+### MAIN TRAINING FUNCTION
+
+def network_train_alexnets(opt, script, nSub, epochs, lr, tr, bt): 
+    
+    ## PRELIMINARY OPERATIONS
+    # Based on the 'script' variable, decide paths and notations of dataset
+    # and folders
+    
+    # Get the specifics of this script
+    script_values = opt['script'].get(script)
+    
+    # Path to the dataset
+    dataset_dir = opt['dir']['datasets']
+    dataset_spec = script_values['dataset_spec']
+    dataset_path = f"{dataset_dir}/{dataset_spec}"
+    
+    # Path where to save the weights
+    weights_dir = opt['dir']['weights']
+    weigths_path = f"{weights_dir}/literate/{script}"  
+    
+    # Path where to save the leraning curve
+    figures_dir = opt['dir']['figures']
+    figures_path = f"{figures_dir}/literate/{script}"  
+    
+    # Notation to use in the bids-like name
+    notation = script_values['notation']
+        
+    # Start the logging 
+    log_dir = opt['dir']['logs']
+    log = init_log(log_dir, notation)
+    
+    
+    ## DATASET 
+    # Get the dataset from the image structure and the classes as csv
+    # (also returns 1000 word categories)
+    
+    # IMPORTANT: paths are optimized to run on enuui, adjust if on a different system
+    latin, word_classes = import_dataset(dataset_path, 
+                                         '../../inputs/words/nl_wordlist.csv')
+    
+    # Loading of the dataset and division in training and validation sets is 
+    # done in the itreation loop, to randomize batches
+    
+    
+    ## ITERATIONS 
+    # To create variability, get multiple instances of the network
+    # Batches, training, will slightly differ between networks 
+    
+    # Number of iterations
+    subjects = nSub
+    
+    ## Define hyperparameters
+    # Epochs: number of times that a network passes through training
+    epochs = epochs
+    
+    # Learning rate: to which extent the network parameters are updated for each batch / epoch
+    learning_rate = lr
+    
+    # Loss function: different functions available in pytorch
+    loss_fn = nn.CrossEntropyLoss() 
+    
+    # Momentum: nudge the optimezer in towards strongest gradient ove multiple steps
+    # Not implemented after latest pilots
+    # If needed, momentum = 0
+    
+    
+    for s in range(subjects): 
+        
+        ## CREATE BATCHES
+        # Split dataset into training and validation and create batches through DataLoader
+        # Specify dataset, size of the training set, size of the batch
+        train_loader, val_loader = load_dataset(latin, tr, bt)
+        
+        # Dataset sanity check: visualize some stimuli
+        sanity_check_dataset(train_loader)
+        
+
+        ## GET NETWORK
+        # List all the models avaliable through pytorch
+        all_models = models.list_models()
+        
+        # If we're training the netwrok on Dutch only (latin bsed script),
+        # take alexnet trained on imagenet and reset the last layer
+        if script == 'latin':
+        
+            # Get AlexNet with Imagenet weights
+            alexnet = models.alexnet(weights = 'IMAGENET1K_V1')
+            alexnet = nn.DataParallel(alexnet)
+            
+            # Evaluate the model, just to check
+            alexnet.eval()
+            model_name = 'alexnet'
+        
+            # Reset last layer (classifier) for new training
+            alexnet = reset_last_layer(alexnet, len(word_classes))
+            
+        # In the other cases (training on latin-based AND experimental conditions),
+        # take alexnet and apply weights of the previous training
+        else: 
+            
+            # Load alexnet without weights
+            alexnet = models.alexnet(pretrained = False)
+            
+            # Load the weights for that given subject 
+            # (it assumes that we are asking for subjects 0 to 4)
+            saved_weights_path = f'{weights_dir}/literate/latin/model-alexnet_sub-{s}_data-LT_epoch-10.pth'
+            state_dict = torch.load(saved_weights_path)
+            
+            # Step 3: Apply the weights to the model
+            alexnet.load_state_dict(state_dict)
+
+            # MOVE THIS FUNCTION WITH OTHERS,
+            # SET FOLDERS, 
+            # PUSH ON GITHUB AND FETCH IN ON ENUUI, 
+            # GET HERE WEIGTHS FROM TRAINING 
+            # RUN BRAILLE
+            
+    
+        # Optimizer: different functions in pytorch
+        optimizer = torch.optim.SGD(alexnet.parameters(), lr =  learning_rate)
+    
+
+        ## TRAIN THE NETWORK
+    
+        # Trackers to monitor training progression
+        train_losses = []
+        train_counter = []
+        val_losses = []
+        val_counter = []
+        
+        # Create filename to identify the iteration
+        filename = f"model-{model_name}_sub-{s}_data-{notation}"
+    
+        # Check your device - GPU (a.k.a. 'cuda') is faster, use it if available
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        
+        alexnet.to(device)
+    
+        # Notify the user 
+        print(f"\n\Training on {notation} script\n")
+        print(f"Using {device} device")
+        print("Training started at:", datetime.now())
+    
+        for e in range(epochs):
+            
+            print("\n")
+            print(f"Subject {s+1}\n")
+        
+            # Train one epoch
+            # Obtain: total number of batches ran, losses, accuracy
+            train_total, train_loss, train_accuracy = train(alexnet, train_loader, optimizer, loss_fn, device)    
+            
+            # Track loss progression, for visualization
+            train_losses.append(train_loss)
+            train_counter.append(e)
+            
+            # Validation
+            # Obtain: number of batches ran, losses, accuracy
+            val_total, val_loss, val_accuracy = validate(alexnet, val_loader, loss_fn, device)
+            
+            # Track loss progression, for visualization
+            val_losses.append(val_loss)
+            val_counter.append(e)
+            
+            # Print report
+            print(f"Epoch {e+1}")
+            print(f"Training - Loss: {train_loss:.4f}, Accuracy: {train_accuracy:.4f}")
+            print(f"Validation - Loss: {val_loss:.4f}, Accuracy: {val_accuracy:.4f}")
+            
+            # Also save to csv, to avoid ctrl-c cmd-v between computers
+            log_entry(log, notation, s, e, train_loss, train_accuracy, val_loss, val_accuracy)
+            
+            # Save current state of the training
+            fullpath = f"{weigths_path}{filename}"
+            torch.save(alexnet.state_dict(), f"{fullpath}_epoch-{e+1}.pth")
+            
+            print(f"Epoch {e+1} ended at: ", datetime.now())
+        
+        
+        ## VISUALZIE TRAINING
+        
+        visualize_training_progress(train_counter,
+                                    train_losses, 
+                                    val_counter, 
+                                    val_losses, 
+                                    filename)  
+
+
 
 ### ---------------------------------------------------------------------------
 ### DATASET FUNCTIONS
 
 # Import a dataset and the wordlist (always the same)
 # Needs speification of dataset, with path
-def import_dataset(path): 
+def import_dataset(path, classes): 
 
     # Define transformations that will be applied to images 
     # - resize to 224x224 (alexnet input)
@@ -47,25 +236,49 @@ def import_dataset(path):
     dataset = torchvision.datasets.ImageFolder(root = path, transform = transform)
 
     # Get the classes / labels for each word
-    word_classes = pd.read_csv('../../inputs/words/nl_wordlist.csv', header = None).values.tolist()
+    word_classes = pd.read_csv(classes, header = None).values.tolist()
 
     return dataset, word_classes
 
 
 # Split the dataset into training and validation
 # then creates batches through Dataloader
-def load_dataset(dataset): 
+def load_dataset(dataset, tr_size, bt_size): 
 
     # Split into training and validation
-    train_size = int(0.7 * len(dataset))
+    train_size = int(tr_size * len(dataset))
     val_size = len(dataset) - train_size
     train_dataset, val_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
     
     # Use DataLoader to create batches
-    train_loader = DataLoader(train_dataset, batch_size = 64, shuffle = True)
-    val_loader = DataLoader(val_dataset, batch_size = 64, shuffle = False)
+    train_loader = DataLoader(train_dataset, batch_size = bt_size, shuffle = True)
+    val_loader = DataLoader(val_dataset, batch_size = bt_size, shuffle = False)
 
     return train_loader, val_loader
+
+
+# Helper function for sanity_check_dataset
+def visualize_dataset_imgs(img, one_channel = False):
+    
+    if one_channel:
+        img = img.mean(dim = 0)
+    img = img / 2 + 0.5     # unnormalize
+    npimg = img.numpy()
+    if one_channel:
+        plt.imshow(npimg, cmap = "Greys")
+    else:
+        plt.imshow(np.transpose(npimg, (1, 2, 0)))
+
+
+# Visualize some transformed stimuli from the train set, to make sure everything is in order
+def sanity_check_dataset(train_loader): 
+    
+    dataiter = iter(train_loader)
+    images, labels = next(dataiter)
+
+    # Create a grid from the images and show them
+    img_grid = torchvision.utils.make_grid(images)
+    visualize_dataset_imgs(img_grid, one_channel = True)
 
 
 ### ---------------------------------------------------------------------------
@@ -163,33 +376,15 @@ def validate(model, loader, loss_fn, device):
     return total, epoch_loss, accuracy
 
 
+def train_one_epoch():
+    
+    return 0
+
+
+
 ### ---------------------------------------------------------------------------
-### SUPPORT FUNCTIONS
+### NETWORK FUNCTIONS
 
-# Helper function for sanity_check_dataset
-def visualize_dataset_imgs(img, one_channel = False):
-    
-    if one_channel:
-        img = img.mean(dim=0)
-    img = img / 2 + 0.5     # unnormalize
-    npimg = img.numpy()
-    if one_channel:
-        plt.imshow(npimg, cmap="Greys")
-    else:
-        plt.imshow(np.transpose(npimg, (1, 2, 0)))
-
-
-# Visualize some transformed stimuli from the train set, to make sure everything is in order
-def sanity_check_dataset(train_loader): 
-    
-    dataiter = iter(train_loader)
-    images, labels = next(dataiter)
-
-    # Create a grid from the images and show them
-    img_grid = torchvision.utils.make_grid(images)
-    visualize_dataset_imgs(img_grid, one_channel = True)
-    
-    
 # Replace the last layer of alexnet with a "clean" new one
 def reset_last_layer(model, num_classes):
     
@@ -210,12 +405,47 @@ def reset_last_layer(model, num_classes):
         param.requires_grad = True
         
     return model
+
+
+# Load weights onto a network
+def load_weights(): 
     
+    return 0 
+
     
-# Save the weights at a give epoch
-def save_epoch(): 
+### ---------------------------------------------------------------------------
+### LOGGING
+
+# Open document and set header
+def init_log(log_dir, script): 
     
-    return 0
+    # get date time
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    
+    csv_file = f"{log_dir}/training-{script}_{timestamp}.csv"
+
+    # Headers for the CSV file
+    headers = ["Script", "subject", "Epoch", "Train_Loss", "Train_Accuracy", "Val_Loss", "Val_Accuracy"]
+
+    # Write headers to the CSV file
+    with open(csv_file, mode = "w", newline = "") as file:
+        writer = csv.writer(file)
+        writer.writerow(headers)
+    
+    return csv_file
+
+
+# Add entry
+def log_entry(csv_file, script, subject, epoch, tr_loss, tr_acc, val_loss, val_acc): 
+    
+    # Appen to the csv
+    with open(csv_file, mode = "a", newline = "") as file:
+        writer = csv.writer(file)
+        writer.writerow([script, subject, epoch, tr_loss, tr_acc, val_loss, val_acc])
+
+    
+### ---------------------------------------------------------------------------
+### MISC
     
 
 # Visualize training progress over the number of batches 
