@@ -46,6 +46,10 @@ plot <- function(data, title, filename) {
       name = "Loss",
       sec.axis = sec_axis(~ . * max(data$Accuracy) / max(data$Loss), name = "Accuracy")
     ) +
+    scale_x_continuous(
+      breaks = 1:10,  # Set x-axis ticks to 1 to 10
+      name = "Epoch"
+    ) +
     labs(
       title = title,
       x = "Epoch",
@@ -186,5 +190,100 @@ Validation - Loss: 0.1240, Accuracy: 0.9739
 plot(data, "LR 1e-4	MOM .4	BATCH 64	TR .7")
 
 
+data <- import("LR 1e-4\tMOM 0\tBATCH 64\tTR .7
+Epoch 1
+Validation - Loss: 6.8970, Accuracy: 0.0016
+Epoch 2
+Validation - Loss: 6.7753, Accuracy: 0.0034
+Epoch 3
+Validation - Loss: 4.8038, Accuracy: 0.0732
+Epoch 4
+Validation - Loss: 2.0547, Accuracy: 0.5231
+Epoch 5
+Validation - Loss: 0.5890, Accuracy: 0.8571
+Epoch 6
+Validation - Loss: 0.2458, Accuracy: 0.9400
+Epoch 7
+Validation - Loss: 0.1292, Accuracy: 0.9677
+Epoch 8
+Validation - Loss: 0.0794, Accuracy: 0.9807
+Epoch 9
+Validation - Loss: 0.0579, Accuracy: 0.9857
+")
+plot(data, "LR 1e-4	MOM 0	BATCH 64	TR .7")
 
+
+data <- import("LR 1e-4\tMOM 0\tBATCH 64\tTR .6
+Epoch 1
+Validation - Loss: 6.8975, Accuracy: 0.0018
+Epoch 2
+Validation - Loss: 6.8088, Accuracy: 0.0036
+Epoch 3
+Validation - Loss: 5.5482, Accuracy: 0.0275
+Epoch 4
+Validation - Loss: 3.1960, Accuracy: 0.2958
+Epoch 5
+Validation - Loss: 1.0492, Accuracy: 0.7510
+Epoch 6
+Validation - Loss: 0.3983, Accuracy: 0.9033
+Epoch 7
+Validation - Loss: 0.2028, Accuracy: 0.9492
+Epoch 8
+Validation - Loss: 0.1189, Accuracy: 0.9705
+Epoch 9
+Validation - Loss: 0.0811, Accuracy: 0.9796
+Epoch 10
+Validation - Loss: 0.0578, Accuracy: 0.9859
+")
+plot(data, "LR 1e-4	MOM 0	BATCH 64	TR .6")
+
+
+data <- import("LR 1e-4\tMOM 0\tBATCH 64\tTR .65
+Epoch 1
+Validation - Loss: 6.9027, Accuracy: 0.0012
+Epoch 2
+Validation - Loss: 6.8644, Accuracy: 0.0029
+Epoch 3
+Validation - Loss: 5.8870, Accuracy: 0.0214
+Epoch 4
+Validation - Loss: 3.1515, Accuracy: 0.2938
+Epoch 5
+Validation - Loss: 1.0114, Accuracy: 0.7581
+Epoch 6
+Validation - Loss: 0.3691, Accuracy: 0.9092
+Epoch 7
+Validation - Loss: 0.1819, Accuracy: 0.9549
+Epoch 8
+Validation - Loss: 0.1137, Accuracy: 0.9709
+Epoch 9
+Validation - Loss: 0.0741, Accuracy: 0.9811
+Epoch 10
+Validation - Loss: 0.0543, Accuracy: 0.9860
+")
+plot(data, "LR 1e-4	MOM 0	BATCH 64	TR .65")
+
+
+data <- import("LR 1e-4\tMOM 0\tBATCH 100\tTR .7
+Epoch 1
+Validation - Loss: 6.9024, Accuracy: 0.0020
+Epoch 2
+Validation - Loss: 6.8798, Accuracy: 0.0025
+Epoch 3
+Validation - Loss: 6.7256, Accuracy: 0.0030
+Epoch 4
+Validation - Loss: 5.7428, Accuracy: 0.0211
+Epoch 5
+Validation - Loss: 4.2049, Accuracy: 0.1437
+Epoch 6
+Validation - Loss: 2.2245, Accuracy: 0.4832
+Epoch 7
+Validation - Loss: 1.0019, Accuracy: 0.7612
+Epoch 8
+Validation - Loss: 0.4888, Accuracy: 0.8805
+Epoch 9
+Validation - Loss: 0.2680, Accuracy: 0.9360
+Epoch 10
+Validation - Loss: 0.1667, Accuracy: 0.9598
+")
+plot(data, "LR 1e-4	MOM 0	BATCH 100	TR .7")
 
