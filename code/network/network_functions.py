@@ -29,7 +29,7 @@ import subprocess
 ### ---------------------------------------------------------------------------
 ### MAIN TRAINING FUNCTION
 
-def network_train_alexnets(opt, script, nSub, epochs, lr, tr, bt, nSubject): 
+def network_train_alexnets(opt, script, nSub, epochs, lr, tr, bt): 
     
     ## PRELIMINARY OPERATIONS
     # Based on the 'script' variable, decide paths and notations of dataset
@@ -157,7 +157,7 @@ def network_train_alexnets(opt, script, nSub, epochs, lr, tr, bt, nSubject):
         val_counter = []
         
         # Create filename to identify the iteration
-        filename = f"model-{model_name}_sub-{nSubject}_data-{notation}"
+        filename = f"model-{model_name}_sub-{s}_data-{notation}"
     
         # Check your device - GPU (a.k.a. 'cuda') is faster, use it if available
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
