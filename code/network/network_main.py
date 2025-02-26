@@ -17,6 +17,7 @@ One script to run them all
 import sys
 sys.path.append('../')
 
+# Import custom functions for training + corent
 from network_functions import *
 from network_option import *
 
@@ -28,8 +29,10 @@ opt = network_option()
 
 
 ### ---------------------------------------------------------------------------
-### TRAIN FIVE ALEXENTS ON LATIN SCRIPT
+### ALEXNETS
 
+## TRAIN FIVE INSTANCES ON LATIN SCRIPT
+#
 # 1. Load the Latin script (LT) dataset with relative classes 
 # 2. Take five instances of alexnet, with classic weights from ImageNet
 # 3. Reset the last layer of alexnet to delete ImageNet's categories and replace 
@@ -37,7 +40,7 @@ opt = network_option()
 # 4. Train this instance with the given hyperparameters
 # 5. Save learning curves in outputs/figures/literate/latin
 # 6. Save weights for each epoch in outputs/weights/literate/latin
-
+#
 # Function specifes: 
 # - which dataset (latin, braille, line)
 # - how many instances (subjects)
@@ -49,35 +52,39 @@ opt = network_option()
 network_train_alexnets(opt, 'latin', 5, 10, 1e-4, 0.7, 100)
 
 
-### ---------------------------------------------------------------------------
-### TRAIN FIVE ALEXENTS ON LATIN + BRAILLE
-
-# 1. Load the Latin-Braille (BR_LT) dataset with relative classes 
+## RE-TRAIN THE SAME FIVE INSTANCES ON NOVEL SCRIPTS
+#
+# Same training procedure, regarding the script 
+# 1. Load the Latin + novel_script (BR/LN_LT) dataset with relative classes 
 # 2. Take five instances of alexnet, without weights
 # 3. Load weights from one of the "literate" "subjects"
 # 4. Train again on new dataset
-# 5. Save learning curves in outputs/figures/literate/braille
-# 6. Save weights for each epoch in outputs/weights/literate/braille
+# 5. Save learning curves in outputs/figures/literate/(braille or line)
+# 6. Save weights for each epoch in outputs/weights/literate/(braille or line)
 
+# Braille training 
 network_train_alexnets(opt, 'braille', 5, 10, 1e-4, 0.7, 100)
 
-
-### ---------------------------------------------------------------------------
-### TRAIN FIVE ALEXENTS ON LATIN + LINE
-
-# 1. Load the Latin-Line (LN_LT) dataset with relative classes 
-# 2. Take five instances of alexnet, without weights
-# 3. Load weights from one of the "literate" "subjects"
-# 4. Train again on new dataset
-# 5. Save learning curves in outputs/figures/literate/line
-# 6. Save weights for each epoch in outputs/weights/literate/line
-
+# Line training
 network_train_alexnets(opt, 'line', 5, 10, 1e-4, 0.7, 100)
 
 
+### ---------------------------------------------------------------------------
+### CORNETS (Z)
 
+## TRAIN FIVE INSTANCES ON NOVEL SCRIPTS
+#
+# Use networks from previous studies (Agrawal and Dehaene's 2024 paper) and 
+# train them on our scripts
+#
+# 1. Load the Latin + novel_script (BR/LN_LT) dataset with relative classes 
+# 2. Load cornet Z models from github:dicarlolab/CORnet
+# 3. Apply weights from Agrawal and Dehaene's French literate network
+# 4. Train again on new dataset
+# 5. Save learning curves in outputs/figures/literate/(braille or line)
+# 6. Save weights for each epoch in outputs/weights/literate/(braille or line)
 
-
+network_train_cornets(opt, 'braille', 1, 10, 1e-4, 0.7, 100)
 
 
 

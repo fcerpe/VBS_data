@@ -5,6 +5,9 @@ Created on Fri Nov 15 16:15:36 2024
 
 @author: cerpelloni
 """
+import sys
+sys.path.append('../lib/CORnet')
+from cornet import *
 
 import os, glob, json, urllib, csv
 
@@ -27,7 +30,7 @@ from datetime import datetime
 import subprocess
 
 ### ---------------------------------------------------------------------------
-### MAIN TRAINING FUNCTION
+### MAIN TRAINING FUNCTION - ALEXNET
 
 def network_train_alexnets(opt, script, nSub, epochs, lr, tr, bt): 
     
@@ -62,13 +65,12 @@ def network_train_alexnets(opt, script, nSub, epochs, lr, tr, bt):
     ## DATASET 
     # Get the dataset from the image structure and the classes as csv
     # (also returns 1000 word categories)
+    # Loading of the dataset and division in training and validation sets is 
+    # done in the itreation loop, to randomize batches
     
     # IMPORTANT: paths are optimized to run on enuui, adjust if on a different system
     latin, word_classes = import_dataset(dataset_path, 
                                          '../../inputs/words/nl_wordlist.csv')
-    
-    # Loading of the dataset and division in training and validation sets is 
-    # done in the itreation loop, to randomize batches
     
     
     ## ITERATIONS 
@@ -87,11 +89,7 @@ def network_train_alexnets(opt, script, nSub, epochs, lr, tr, bt):
     
     # Loss function: different functions available in pytorch
     loss_fn = nn.CrossEntropyLoss() 
-    
-    # Momentum: nudge the optimezer in towards strongest gradient ove multiple steps
-    # Not implemented after latest pilots
-    # If needed, momentum = 0
-    
+
     
     for s in range(subjects): 
         
@@ -201,6 +199,185 @@ def network_train_alexnets(opt, script, nSub, epochs, lr, tr, bt):
             # Save current state of the training
             fullpath = f"{weights_path}/{filename}"
             torch.save(alexnet.state_dict(), f"{fullpath}_epoch-{e+1}.pth")
+            
+            print(f"Epoch {e+1} ended at: ", datetime.now())
+        
+        
+        ## VISUALZIE TRAINING
+        
+        visualize_training_progress(train_counter,
+                                    train_losses, 
+                                    val_counter, 
+                                    val_losses, 
+                                    filename)  
+
+
+
+### ---------------------------------------------------------------------------
+### MAIN TRAINING FUNCTION - CORNET Z 
+
+def network_train_cornets(opt, script, nSub, epochs, lr, tr, bt): 
+    
+    ## PRELIMINARY OPERATIONS
+    # Based on the 'script' variable, decide paths and notations of dataset
+    # and folders
+    
+    # Get the specifics of this script
+    script_values = opt['script'].get(script)
+    
+    # Path to the dataset
+    dataset_dir = opt['dir']['datasets']
+    dataset_spec = script_values['dataset_spec']
+    dataset_path = f"{dataset_dir}/{dataset_spec}/"
+    
+    # Path where to save the weights
+    weights_dir = opt['dir']['weights']
+    weights_path = f"{weights_dir}/literate/{script}/"  
+    
+    # Path where to save the leraning curve
+    figures_dir = opt['dir']['figures']
+    figures_path = f"{figures_dir}/literate/{script}/"  
+    
+    # Notation to use in the bids-like name
+    notation = script_values['notation']
+        
+    # Start the logging 
+    log_dir = opt['dir']['logs']
+    log = init_log(log_dir, notation)
+    
+    
+    ## DATASET 
+    # Get the dataset from the image structure and the classes as csv
+    # (also returns 1000 word categories)
+    # Loading of the dataset and division in training and validation sets is 
+    # done in the itreation loop, to randomize batches
+    
+    # IMPORTANT: paths are optimized to run on enuui, adjust if on a different system
+    latin, word_classes = import_dataset(dataset_path, 
+                                         '../../inputs/words/nl_wordlist.csv')
+    
+    
+    ## ITERATIONS 
+    # To create variability, get multiple instances of the network
+    # Batches, training, will slightly differ between networks 
+    
+    # Number of iterations
+    subjects = nSub
+    
+    ## Define hyperparameters
+    # Epochs: number of times that a network passes through training
+    epochs = epochs
+    
+    # Learning rate: to which extent the network parameters are updated for each batch / epoch
+    learning_rate = lr
+    
+    # Loss function: different functions available in pytorch
+    loss_fn = nn.CrossEntropyLoss() 
+    
+    
+    for s in range(subjects): 
+        
+        ## CREATE BATCHES
+        # Split dataset into training and validation and create batches through DataLoader
+        # Specify dataset, size of the training set, size of the batch
+        train_loader, val_loader = load_dataset(latin, tr, bt)
+        
+        # Dataset sanity check: visualize some stimuli
+        sanity_check_dataset(train_loader)
+        
+
+        ## GET NETWORK        
+        # Load CORnet Z (from dicarlolab's github)
+        cornet = cornet_z()
+        
+        # If we're training the netwrok on Dutch only (latin based script),
+        # take alexnet trained on imagenet and reset the last layer
+        if script == 'latin':
+        
+            # Apply ImageNet weights
+            saved_weights_path = '../../outputs/weights/cornet/model-cornet_data-ImageNet.pth'
+            state_dict = torch.load(saved_weights_path)
+            cornet.load_state_dict(state_dict)
+            
+            # Evaluate the model, just to check
+            cornet.eval()
+            model_name = 'cornet'
+        
+            # Reset last layer (classifier) for new training
+            cornet = reset_last_layer(cornet, len(word_classes))
+            
+        # In the other cases (training on latin-based AND experimental conditions),
+        # take alexnet and apply weights of the previous training
+        else: 
+            
+            # Apply the weights corresponding to the literate network in French
+            # (Latin script)
+            saved_weights_path = '../../outputs/weights/cornet/french/save_lit_fr_rep{s}.pth.tar'
+            state_dict = torch.load(saved_weights_path)
+            cornet.load_state_dict(state_dict)
+            
+            # Evaluate the model, just to check
+            cornet.eval()
+            model_name = 'cornet'
+            
+    
+        # Optimizer: different functions in pytorch
+        optimizer = torch.optim.SGD(cornet.parameters(), lr =  learning_rate)
+    
+
+        ## TRAIN THE NETWORK
+    
+        # Trackers to monitor training progression
+        train_losses = []
+        train_counter = []
+        val_losses = []
+        val_counter = []
+        
+        # Create filename to identify the iteration
+        filename = f"model-{model_name}_sub-{s}_data-{notation}"
+    
+        # Check your device - GPU (a.k.a. 'cuda') is faster, use it if available
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+        
+        cornet.to(device)
+    
+        # Notify the user 
+        print(f"\nTraining on {notation} script\n")
+        print(f"Using {device} device")
+        print("Training started at:", datetime.now())
+        
+        print("\n")
+        print(f"Subject {s+1}\n")
+    
+        for e in range(epochs):
+            
+            # Train one epoch
+            # Obtain: total number of batches ran, losses, accuracy
+            train_total, train_loss, train_accuracy = train(cornet, train_loader, optimizer, loss_fn, device)    
+            
+            # Track loss progression, for visualization
+            train_losses.append(train_loss)
+            train_counter.append(e)
+            
+            # Validation
+            # Obtain: number of batches ran, losses, accuracy
+            val_total, val_loss, val_accuracy = validate(cornet, val_loader, loss_fn, device)
+            
+            # Track loss progression, for visualization
+            val_losses.append(val_loss)
+            val_counter.append(e)
+            
+            # Print report
+            print(f"Epoch {e+1}")
+            print(f"Training - Loss: {train_loss:.4f}, Accuracy: {train_accuracy:.4f}")
+            print(f"Validation - Loss: {val_loss:.4f}, Accuracy: {val_accuracy:.4f}")
+            
+            # Also save to csv, to avoid ctrl-c cmd-v between computers
+            log_entry(log, notation, s, e, train_loss, train_accuracy, val_loss, val_accuracy)
+            
+            # Save current state of the training
+            fullpath = f"{weights_path}/{filename}"
+            torch.save(cornet.state_dict(), f"{fullpath}_epoch-{e+1}.pth")
             
             print(f"Epoch {e+1} ended at: ", datetime.now())
         
@@ -428,7 +605,7 @@ def log_entry(csv_file, script, subject, epoch, tr_loss, tr_acc, val_loss, val_a
     # Appen to the csv
     with open(csv_file, mode = "a", newline = "") as file:
         writer = csv.writer(file)
-        writer.writerow([script, subject, epoch, tr_loss, tr_acc, val_loss, val_acc])
+        writer.writerow([script, subject, epoch+1, tr_loss, tr_acc, val_loss, val_acc])
 
     
 ### ---------------------------------------------------------------------------

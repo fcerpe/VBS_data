@@ -1,5 +1,7 @@
 # Required Libraries
 library(ggplot2)
+library(dplyr)
+
 
 import <- function(text) {
   
@@ -33,7 +35,30 @@ import <- function(text) {
   print(data)
 }
 
-plot <- function(data, title, filename) {
+
+import_csv <- function(file_path) {
+  # Read the CSV file
+  data <- read.csv(file_path)
+  
+  # Select the columns of interest: Epoch, Val_Loss, Val_Accuracy
+  result <- data.frame(
+    Epoch = data$Epoch,
+    Loss = data$Val_Loss,
+    Accuracy = data$Val_Accuracy
+  )
+  
+  # Print the organized table
+  print(result)
+  
+  # Optionally return the table if further processing is needed
+  return(result)
+}
+
+
+plot <- function(data, title) {
+  
+  savename <- paste0(title, ".png")
+
   
   # Create the plot
   ggplot(data, aes(x = Epoch)) +
@@ -60,230 +85,111 @@ plot <- function(data, title, filename) {
       plot.title = element_text(hjust = 0.5),
       legend.position = "bottom"
     )
+  
+}
+
+multiplot <- function(d1,d2,d3,d4) {
+  d1$Source <- "d1"
+  d2$Source <- "d2"
+  d3$Source <- "d3"
+  d4$Source <- "d4"
+  
+  # Combine all datasets into one
+  combined_data <- rbind(d1, d2, d3, d4)
+  
+  # Define color and line type mappings
+  color_mapping <- c("d1" = "#FF9E4A", "d2" = "#FF9E4A", "d3" = "#69B5A2", "d4" = "#69B5A2")
+  linetype_mapping <- c("d1" = "solid", "d2" = "dashed", "d3" = "solid", "d4" = "dashed")
+  
+  # Custom legend labels
+  legend_labels <- c("d1" = "sub-1_braille", "d2" = "sub-2_braille", 
+                     "d3" = "sub-1_line", "d4" = "sub-2_line")
+  
+  # Create the plot
+  accuracy_plot <- ggplot(combined_data, aes(x = Epoch, y = Accuracy, color = Source, linetype = Source)) +
+    geom_line(size = 1) +  # Line plot with thickness
+    scale_color_manual(values = color_mapping, labels = legend_labels) +  # Custom color and labels
+    scale_linetype_manual(values = linetype_mapping, labels = legend_labels) +  # Custom linetype and labels
+    scale_x_continuous(
+      breaks = 1:10,  # Set x-axis ticks to 1 to 10
+      name = "Epoch"
+    ) +
+    labs(
+      title = "Validation Accuracy Over Epochs",
+      x = "Epoch",
+      y = "Accuracy",
+      color = "Dataset",
+      linetype = "Dataset"
+    ) +
+    theme_minimal() +  # Clean theme
+    theme(
+      text = element_text(size = 12),
+      plot.title = element_text(hjust = 0.5)
+    )
+  
+  # Display the plot
+  print(accuracy_plot)
+  
+  ggsave("subs-2_script-multiplot.png", width = 8, height = 6, dpi = 300)
+  
+}
+
+allplot <- function(statsIn) {
+  
+  custom_colors <- c("BR" = "#FF9E4A", "LN" = "#69B5A2")
+  
+  # Plot
+  ggplot(statsIn, aes(x = Epoch, y = Mean_Accuracy, color = Script, fill = Script)) +
+    geom_line(size = 3) +  # Line for mean accuracy
+    geom_ribbon(aes(ymin = CI_Low, ymax = CI_High), alpha = 0.2, color = NA) +  # Shaded confidence interval
+    scale_x_continuous(breaks = 1:10) +  # Set x-axis ticks from 1 to 10
+    scale_color_manual(values = custom_colors) +  # Custom colors for lines
+    scale_fill_manual(values = custom_colors) +  # Custom colors for confidence intervals
+    labs(x = "Epoch", y = "Accuracy") +
+    theme_minimal() +
+    theme(
+      axis.text = element_text(size = 14),       # Increase x and y tick size
+      axis.title = element_text(size = 16),      # Increase x and y label size
+      legend.position = "none"                   # Remove legend
+    )
+  
+  ggsave("../../outputs/figures/subs-5_script-both_plot-accuracy.png", width = 8, height = 5, dpi = 300)
+   
 }
 
 ### Plot all the pilots
 
-data <- import("LR 1e-4\tMOM .9\tBATCH 128\tTR .7
-Epoch 1
-Validation - Loss: 6.6293, Accuracy: 0.0045
-Epoch 2
-Validation - Loss: 4.1339, Accuracy: 0.1208
-Epoch 3
-Validation - Loss: 0.6515, Accuracy: 0.8467
-Epoch 4
-Validation - Loss: 0.1157, Accuracy: 0.9703
-Epoch 5
-Validation - Loss: 0.0438, Accuracy: 0.9893
-Epoch 6
-Validation - Loss: 0.0249, Accuracy: 0.9936
-Epoch 7
-Validation - Loss: 0.0129, Accuracy: 0.9971
-Epoch 8
-Validation - Loss: 0.0080, Accuracy: 0.9982
-Epoch 9
-Validation - Loss: 0.0067, Accuracy: 0.9984
-Epoch 10
-Validation - Loss: 0.0045, Accuracy: 0.9991
-")
-plot(data, "LR 1e-4 - MOM .9 - BATCH 128 - TR .7")
+br1 <- import_csv('../../outputs/logs/training-BR_2025-01-21_13-24-59.csv')
+br2 <- import_csv('../../outputs/logs/training-BR_2025-01-25_17-50-05.csv')
+br3 <- import_csv('../../outputs/logs/training-BR_2025-01-28_21-03-23.csv')
+br4 <- import_csv('../../outputs/logs/training-BR_2025-01-31_08-10-18.csv')
+br5 <- import_csv('../../outputs/logs/training-BR_2025-02-02_17-55-44.csv')
 
+ln1 <- import_csv('../../outputs/logs/training-LN_2025-01-22_20-47-02.csv')
+ln2 <- import_csv('../../outputs/logs/training-LN_2025-01-24_13-31-10.csv')
+ln3 <- import_csv('../../outputs/logs/training-LN_2025-01-27_14-37-52.csv')
+ln4 <- import_csv('../../outputs/logs/training-LN_2025-01-30_02-12-52.csv')
+ln5 <- import_csv('../../outputs/logs/training-LN_2025-02-01_12-03-44.csv')
 
-data <- import("LR 1e-4\tMOM .5\tBATCH 64\tTR .7
-Epoch 1
-Validation - Loss: 6.8817, Accuracy: 0.0014
-Epoch 2
-Validation - Loss: 6.7080, Accuracy: 0.0026
-Epoch 3
-Validation - Loss: 6.1792, Accuracy: 0.0110
-Epoch 4
-Validation - Loss: 4.8790, Accuracy: 0.0689
-Epoch 5
-Validation - Loss: 2.8545, Accuracy: 0.3365
-Epoch 6
-Validation - Loss: 1.1346, Accuracy: 0.7419
-Epoch 7
-Validation - Loss: 0.4109, Accuracy: 0.9097
-Epoch 8
-Validation - Loss: 0.1699, Accuracy: 0.9633
-Epoch 9
-Validation - Loss: 0.0912, Accuracy: 0.9814
-Epoch 10
-Validation - Loss: 0.0624, Accuracy: 0.9868")
-plot(data, "LR 1e-4 MOM .5 BATCH 64 TR .7")
+br <- rbind(br1, br2, br3, br4, br5)
+br$Script <- "BR"
+
+ln <- rbind(ln1, ln2, ln3, ln4, ln5)
+ln$Script <- "LN"
+
+learning <- rbind(br,ln)
+
+learning_stats <- learning %>% group_by(Epoch, Script) %>%
+                               summarise(Mean_Accuracy = mean(Accuracy),
+                                         SD = sd(Accuracy),
+                                         N = n(),  # Number of observations per group
+                                         SE = SD / sqrt(N),  # Standard error
+                                         CI_Low = Mean_Accuracy - 1.96 * SE,  # 95% CI lower bound
+                                         CI_High = Mean_Accuracy + 1.96 * SE  # 95% CI upper bound
+                                         )
+
+allplot(learning_stats)
 
 
 
-data <- import("LR 1e-4\tMOM .9\tBATCH 64\tTR .7
-Epoch 1
-Validation - Loss: 5.1268, Accuracy: 0.0405
-Epoch 2
-Validation - Loss: 0.2161, Accuracy: 0.9452
-Epoch 3
-Validation - Loss: 0.0260, Accuracy: 0.9937
-Epoch 4
-Validation - Loss: 0.0139, Accuracy: 0.9961
-Epoch 5
-Validation - Loss: 0.0079, Accuracy: 0.9979
-Epoch 6
-Validation - Loss: 0.0056, Accuracy: 0.9984
-Epoch 7
-Validation - Loss: 0.0031, Accuracy: 0.9992
-Epoch 8
-Validation - Loss: 0.0032, Accuracy: 0.9991
-Epoch 9
-Validation - Loss: 0.0016, Accuracy: 0.9997
-Epoch 10
-Validation - Loss: 0.0017, Accuracy: 0.9995")
-plot(data, "LR 1e-4	MOM .9	BATCH 64	TR .7")
-
-
-
-data <- import("LR 1e-3\tMOM .9\tBATCH 64\tTR .7
-Epoch 1
-Validation - Loss: 6.9087, Accuracy: 0.0010
-Epoch 2
-Validation - Loss: 6.9088, Accuracy: 0.0009
-Epoch 3
-Validation - Loss: 6.9087, Accuracy: 0.0009
-Epoch 4
-Validation - Loss: 6.9086, Accuracy: 0.0009
-Epoch 5
-Validation - Loss: 6.6751, Accuracy: 0.0020
-Epoch 6
-Validation - Loss: 0.0314, Accuracy: 0.9900
-Epoch 7
-Validation - Loss: 0.0031, Accuracy: 0.9990
-Epoch 8
-Validation - Loss: 0.0015, Accuracy: 0.9995
-Epoch 9
-Validation - Loss: 0.0005, Accuracy: 0.9999
-Epoch 10
-Validation - Loss: 0.0003, Accuracy: 0.9999
-")
-plot(data, "LR 1e-3	MOM .9	BATCH 64	TR .7")
-
-
-
-data <- import("LR 1e-4\tMOM .4\tBATCH 64\tTR .7
-Epoch 1
-Validation - Loss: 6.8919, Accuracy: 0.0010
-Epoch 2
-Validation - Loss: 6.7895, Accuracy: 0.0019
-Epoch 3
-Validation - Loss: 6.4849, Accuracy: 0.0064
-Epoch 4
-Validation - Loss: 5.8097, Accuracy: 0.0227
-Epoch 5
-Validation - Loss: 4.3495, Accuracy: 0.1145
-Epoch 6
-Validation - Loss: 2.6652, Accuracy: 0.3831
-Epoch 7
-Validation - Loss: 1.2227, Accuracy: 0.7189
-Epoch 8
-Validation - Loss: 0.4778, Accuracy: 0.8958
-Epoch 9
-Validation - Loss: 0.2129, Accuracy: 0.9548
-Epoch 10
-Validation - Loss: 0.1240, Accuracy: 0.9739
-")
-plot(data, "LR 1e-4	MOM .4	BATCH 64	TR .7")
-
-
-data <- import("LR 1e-4\tMOM 0\tBATCH 64\tTR .7
-Epoch 1
-Validation - Loss: 6.8970, Accuracy: 0.0016
-Epoch 2
-Validation - Loss: 6.7753, Accuracy: 0.0034
-Epoch 3
-Validation - Loss: 4.8038, Accuracy: 0.0732
-Epoch 4
-Validation - Loss: 2.0547, Accuracy: 0.5231
-Epoch 5
-Validation - Loss: 0.5890, Accuracy: 0.8571
-Epoch 6
-Validation - Loss: 0.2458, Accuracy: 0.9400
-Epoch 7
-Validation - Loss: 0.1292, Accuracy: 0.9677
-Epoch 8
-Validation - Loss: 0.0794, Accuracy: 0.9807
-Epoch 9
-Validation - Loss: 0.0579, Accuracy: 0.9857
-")
-plot(data, "LR 1e-4	MOM 0	BATCH 64	TR .7")
-
-
-data <- import("LR 1e-4\tMOM 0\tBATCH 64\tTR .6
-Epoch 1
-Validation - Loss: 6.8975, Accuracy: 0.0018
-Epoch 2
-Validation - Loss: 6.8088, Accuracy: 0.0036
-Epoch 3
-Validation - Loss: 5.5482, Accuracy: 0.0275
-Epoch 4
-Validation - Loss: 3.1960, Accuracy: 0.2958
-Epoch 5
-Validation - Loss: 1.0492, Accuracy: 0.7510
-Epoch 6
-Validation - Loss: 0.3983, Accuracy: 0.9033
-Epoch 7
-Validation - Loss: 0.2028, Accuracy: 0.9492
-Epoch 8
-Validation - Loss: 0.1189, Accuracy: 0.9705
-Epoch 9
-Validation - Loss: 0.0811, Accuracy: 0.9796
-Epoch 10
-Validation - Loss: 0.0578, Accuracy: 0.9859
-")
-plot(data, "LR 1e-4	MOM 0	BATCH 64	TR .6")
-
-
-data <- import("LR 1e-4\tMOM 0\tBATCH 64\tTR .65
-Epoch 1
-Validation - Loss: 6.9027, Accuracy: 0.0012
-Epoch 2
-Validation - Loss: 6.8644, Accuracy: 0.0029
-Epoch 3
-Validation - Loss: 5.8870, Accuracy: 0.0214
-Epoch 4
-Validation - Loss: 3.1515, Accuracy: 0.2938
-Epoch 5
-Validation - Loss: 1.0114, Accuracy: 0.7581
-Epoch 6
-Validation - Loss: 0.3691, Accuracy: 0.9092
-Epoch 7
-Validation - Loss: 0.1819, Accuracy: 0.9549
-Epoch 8
-Validation - Loss: 0.1137, Accuracy: 0.9709
-Epoch 9
-Validation - Loss: 0.0741, Accuracy: 0.9811
-Epoch 10
-Validation - Loss: 0.0543, Accuracy: 0.9860
-")
-plot(data, "LR 1e-4	MOM 0	BATCH 64	TR .65")
-
-
-data <- import("LR 1e-4\tMOM 0\tBATCH 100\tTR .7
-Epoch 1
-Validation - Loss: 6.9024, Accuracy: 0.0020
-Epoch 2
-Validation - Loss: 6.8798, Accuracy: 0.0025
-Epoch 3
-Validation - Loss: 6.7256, Accuracy: 0.0030
-Epoch 4
-Validation - Loss: 5.7428, Accuracy: 0.0211
-Epoch 5
-Validation - Loss: 4.2049, Accuracy: 0.1437
-Epoch 6
-Validation - Loss: 2.2245, Accuracy: 0.4832
-Epoch 7
-Validation - Loss: 1.0019, Accuracy: 0.7612
-Epoch 8
-Validation - Loss: 0.4888, Accuracy: 0.8805
-Epoch 9
-Validation - Loss: 0.2680, Accuracy: 0.9360
-Epoch 10
-Validation - Loss: 0.1667, Accuracy: 0.9598
-")
-plot(data, "LR 1e-4	MOM 0	BATCH 100	TR .7")
 
