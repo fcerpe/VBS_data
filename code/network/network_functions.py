@@ -295,7 +295,7 @@ def network_train_cornets(opt, script, nSub, epochs, lr, tr, bt):
         if script == 'latin':
         
             # Apply ImageNet weights
-            saved_weights_path = '../../outputs/weights/cornet/model-cornet_data-ImageNet.pth'
+            saved_weights_path = '../../outputs/weights/literate/cornet/model-cornet_data-ImageNet.pth'
             state_dict = torch.load(saved_weights_path)
             cornet.load_state_dict(state_dict)
             
@@ -312,7 +312,7 @@ def network_train_cornets(opt, script, nSub, epochs, lr, tr, bt):
             
             # Apply the weights corresponding to the literate network in French
             # (Latin script)
-            saved_weights_path = '../../outputs/weights/cornet/french/save_lit_fr_rep{s}.pth.tar'
+            saved_weights_path = '../../outputs/weights/literate/cornet/french/save_lit_fr_rep{s}.pth.tar'
             state_dict = torch.load(saved_weights_path)
             cornet.load_state_dict(state_dict)
             
