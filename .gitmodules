@@ -12,3 +12,6 @@
 	path = inputs/datasets
 	url = git@gin.g-node.org:/fcerpe/VBS_datasets.git
 	datalad-url = git@gin.g-node.org:/fcerpe/VBS_datasets.git
+[submodule "code/lib/CORnet"]
+	path = code/lib/CORnet
+	url = git@github.com:dicarlolab/CORnet.git
