@@ -17,7 +17,7 @@ One script to run them all
 import sys
 sys.path.append('../')
 
-# Import custom functions for training + corent
+# Import custom functions for training + cornet
 from network_functions import *
 from network_option import *
 
@@ -84,7 +84,7 @@ network_train_alexnets(opt, 'line', 5, 10, 1e-4, 0.7, 100)
 # 5. Save learning curves in outputs/figures/literate/(braille or line)
 # 6. Save weights for each epoch in outputs/weights/literate/(braille or line)
 
-network_train_cornets(opt, 'braille', 1, 10, 1e-4, 0.7, 100)
+network_train_cornets(opt, 'latin', 1, 10, 1e-4, 0.7, 100)
 
 
 

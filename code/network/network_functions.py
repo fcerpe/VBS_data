@@ -26,6 +26,7 @@ import seaborn as sns
 from PIL import Image
 
 from datetime import datetime
+from collections import OrderedDict
 
 import subprocess
 
@@ -289,22 +290,26 @@ def network_train_cornets(opt, script, nSub, epochs, lr, tr, bt):
         ## GET NETWORK        
         # Load CORnet Z (from dicarlolab's github)
         cornet = cornet_z()
-        
+
         # If we're training the netwrok on Dutch only (latin based script),
         # take alexnet trained on imagenet and reset the last layer
         if script == 'latin':
         
             # Apply ImageNet weights
+            # Remember to unlock any datalad alias file
             saved_weights_path = '../../outputs/weights/literate/cornet/model-cornet_data-ImageNet.pth'
-            state_dict = torch.load(saved_weights_path)
-            cornet.load_state_dict(state_dict)
+            saved_weights = torch.load(saved_weights_path)
+            cornet.load_state_dict(saved_weights['state_dict'])
             
             # Evaluate the model, just to check
             cornet.eval()
             model_name = 'cornet'
         
             # Reset last layer (classifier) for new training
-            cornet = reset_last_layer(cornet, len(word_classes))
+            cornet = reset_last_layer(cornet, model_name, len(word_classes))
+            
+            # cornet = nn.DataParallel(cornet)
+
             
         # In the other cases (training on latin-based AND experimental conditions),
         # take alexnet and apply weights of the previous training
@@ -312,14 +317,16 @@ def network_train_cornets(opt, script, nSub, epochs, lr, tr, bt):
             
             # Apply the weights corresponding to the literate network in French
             # (Latin script)
-            saved_weights_path = '../../outputs/weights/literate/cornet/french/save_lit_fr_rep{s}.pth.tar'
-            state_dict = torch.load(saved_weights_path)
-            cornet.load_state_dict(state_dict)
+            saved_weights_path = f'../../outputs/weights/literate/cornet/french/save_lit_fr_rep{s}.pth.tar'
+            saved_weights = torch.load(saved_weights_path)
+            cornet.load_state_dict(saved_weights['state_dict'])
             
             # Evaluate the model, just to check
             cornet.eval()
             model_name = 'cornet'
             
+            # Reset last layer (classifier) for new training
+            cornet = reset_last_layer(cornet, len(word_classes))
     
         # Optimizer: different functions in pytorch
         optimizer = torch.optim.SGD(cornet.parameters(), lr =  learning_rate)
@@ -556,20 +563,30 @@ def validate(model, loader, loss_fn, device):
 ### NETWORK FUNCTIONS
 
 # Replace the last layer of alexnet with a "clean" new one
-def reset_last_layer(model, num_classes):
+def reset_last_layer(model, model_name, num_classes):
     
     # Freeze all layers except the last one - just to be cautious
     for param in model.parameters():
         param.requires_grad = False
     
-    # Reset the last layer
-    # Get the number of features in the original layer
-    num_features = model.module.classifier[6].in_features  
-    
-    # Replace the last layer
-    # In VBS we deal with the same number of classes (1000), we just want to overwrite them 
-    model.module.classifier[6] = nn.Linear(num_features, num_classes)
-    
+    # Reset the last layer, depending on the network
+    # Same procedure, different specifics: we deal with the same number of classes (1000), we just want to overwrite them 
+    if model_name == 'alexnet':
+        
+        # Get the number of features in the original layer
+        num_features = model.module.classifier[6].in_features  
+        
+        # Replace the last layer
+        model.module.classifier[6] = nn.Linear(num_features, num_classes)
+        
+    elif model_name == 'cornet':
+            
+        # Get the number of features in the original layer
+        num_features = model.module.decoder.linear.in_features  
+        
+        # Replace the last layer
+        model.module.decoder.linear = nn.Linear(num_features, num_classes)
+        
     # Unfreeze the layers
     for param in model.parameters():
         param.requires_grad = True
@@ -630,9 +647,43 @@ def visualize_training_progress(train_counter, train_loss, val_counter, val_loss
 
     plt.show()
     
+# Reconcile 'state_dict' by modifying the keys name.
+# From the input dictionary, add "module." to every key, to make it readable by 
+# load_state_dict
+def reconcile_cornet_imagenet(in_dict):
     
+    # load_state_dict does not like the format of the ImageNet weights
+    # Looking at the errors, turns out that 'state_dict' has keys in the format
+    # "module.{area}.etc" instead of "module.module.{area}.etc"
     
+    # Not a hack, just a renaming
+    out_dict = OrderedDict((f"module.{key}", value) for key, value in in_dict.items())
+
+    return out_dict
     
+
+# Similarly, reconcile 'state_dict' from Agrawal and Dehaene 
+def reconcile_cornet_literate_french(in_dict):
     
+    # load_state_dict does not like the format of the ImageNet weights
+    # Looking at the errors, turns out that 'state_dict' has keys in the format
+    # "module.{area}.etc" instead of "module.module.{area}.etc"
+    
+    # Not a hack, just a renaming
+    # Create a new OrderedDict with modified keys
+    out_dict = OrderedDict()
+    for key, value in in_dict.items():
+        
+        # Add "module." to all the entries
+        new_key = f"module.{key}"  
+        
+        # If it's a "linear" layer, specify "decoder."
+        if "linear" in new_key:  
+            new_key = new_key.replace("module.", "module.decoder.", 1)
+            
+        # Add new proper key with corresponding state
+        out_dict[new_key] = value
+
+    return out_dict
     
     
