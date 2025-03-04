@@ -120,7 +120,7 @@ def network_train_alexnets(opt, script, nSub, epochs, lr, tr, bt):
             model_name = 'alexnet'
         
             # Reset last layer (classifier) for new training
-            alexnet = reset_last_layer(alexnet, len(word_classes))
+            alexnet = reset_last_layer(alexnet, 'alexnet', len(word_classes))
             
         # In the other cases (training on latin-based AND experimental conditions),
         # take alexnet and apply weights of the previous training
@@ -315,18 +315,23 @@ def network_train_cornets(opt, script, nSub, epochs, lr, tr, bt):
         # take alexnet and apply weights of the previous training
         else: 
             
+            # Quick workaround: Agrawal and Dehaene have 2000 categories (1000 ImageNet + 1000 words). We need to modifiy our netwrok to fit the weights. It will be reset to 1000 later anyway
+            cornet = reset_last_layer(cornet, 'cornet', 2000)
+            
             # Apply the weights corresponding to the literate network in French
             # (Latin script)
             saved_weights_path = f'../../outputs/weights/literate/cornet/french/save_lit_fr_rep{s}.pth.tar'
             saved_weights = torch.load(saved_weights_path)
-            cornet.load_state_dict(saved_weights['state_dict'])
+            
+            saved_state_dict = reconcile_cornet_literate_french(saved_weights['state_dict'])
+            cornet.load_state_dict(saved_state_dict)
             
             # Evaluate the model, just to check
             cornet.eval()
             model_name = 'cornet'
             
             # Reset last layer (classifier) for new training
-            cornet = reset_last_layer(cornet, len(word_classes))
+            cornet = reset_last_layer(cornet, 'cornet', len(word_classes))
     
         # Optimizer: different functions in pytorch
         optimizer = torch.optim.SGD(cornet.parameters(), lr =  learning_rate)
@@ -675,7 +680,7 @@ def reconcile_cornet_literate_french(in_dict):
     for key, value in in_dict.items():
         
         # Add "module." to all the entries
-        new_key = f"module.{key}"  
+        new_key = f"{key}"  
         
         # If it's a "linear" layer, specify "decoder."
         if "linear" in new_key:  
