@@ -71,11 +71,15 @@ def zip_subfolders(parent_folder):
         # Process only subfolders
         if os.path.isdir(subfolder_path):
             zip_filename = f"{subfolder_path}.zip"
+            
             with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                
                 # Walk through the subfolder
                 for root, _, files in os.walk(subfolder_path):
+                    
                     for file in files:
                         file_path = os.path.join(root, file)
+                        
                         # Add files to the zip, preserving the folder structure
                         zipf.write(file_path, os.path.relpath(file_path, subfolder_path))
             
@@ -101,17 +105,33 @@ def unzip_files(parent_folder):
             print(f"Extracted: {zip_path} to {extract_folder}")
 
 
+# ZIP FOLDER
+# used for test sets
+def zip_folder(parent_folder):
+    
+    # Get absolute path
+    folder_path = os.path.abspath(parent_folder)  
+    
+    # Extract folder name and use it to make zipped folder name
+    folder_name = os.path.basename(folder_path)  
+    output_zip = os.path.join(os.path.dirname(folder_path), f"{folder_name}.zip") 
 
-### Extract cloned zip files
-# after datald clone and get, actually get the images to train the networks
-# lt_path = '/data/Filippo/inputs/datasets/LT'
-# unzip_files(lt_path)
+    # Zip
+    with zipfile.ZipFile(output_zip, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        
+        for root, _, files in os.walk(folder_path):
+            
+            for file in files:
+                
+                file_path = os.path.join(root, file)
+                
+                # Preserve folder structure
+                arcname = os.path.relpath(file_path, folder_path)  
+                zipf.write(file_path, arcname)
+    
+    # Once it's done, remove the original folder
+    os.rmdir(parent_folder)
 
-brlt_path = '../../inputs/datasets/BR_LT'
-unzip_files(brlt_path)
-
-lnlt_path = '../../inputs/datasets/LN_LT'
-unzip_files(lnlt_path)
 
 
 

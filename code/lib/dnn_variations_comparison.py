@@ -19,6 +19,10 @@ Based on Janini et al. 2022 and on Andrea Costantino's script
 
 @author: Filippo Cerpelloni
 """
+import sys
+sys.path.append('../')
+
+
 import os
 import glob
 import json
@@ -33,7 +37,7 @@ from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 from scipy.spatial.distance import pdist, squareform
-from activation_extraction import * 
+from src.activation_extraction import * 
 
 
 ## Load AlexNet and relative wizardry 
@@ -56,17 +60,18 @@ imagenet_classes = json.loads(urllib.request.urlopen(url).read().decode())
 # Assumes that all the stimuli are balanced in terms of pixel density across scripts, sizes, thicknesses
 
 # Find paths for all scripts
-stim_dir = "letters/stimuli" 
+stim_dir = "../../inputs/letters" 
 stim_paths = glob.glob(os.path.join(stim_dir, '*.png'))
+
+stim_paths = sorted(stim_paths)
 
 # Get a list of alphabet + letter, to order the batches 
 letters_set = set()
 
 for s in stim_paths:
-    parts = s.split('_')
-    prefix = parts[0].split('/')[-1]  
-    letter = parts[1]  
-    letters_set.add(f"{prefix}_{letter}")
+    parts = s.split('/')
+    stim_info = parts[-1].split('.')[0]  
+    letters_set.add(f"{stim_info}")
 
 letters_list = sorted(list(letters_set))
 
@@ -88,7 +93,7 @@ transform = transforms.Compose([
 dataset = ImageDataset(images, transform = transform)
 
 # batch size of 20 means that we process one letter and its variations at the time
-dataloader = DataLoader(dataset, batch_size = 25, shuffle = False)
+dataloader = DataLoader(dataset, batch_size = 26, shuffle = False)
 
 # Store data in dictionaries to then average, distance, plot activations
 raw_activations_dict = {}
@@ -103,23 +108,15 @@ for b, batch in enumerate(dataloader):
     
     # Tell the user which letter is being processed
     print(f"working on: {letters_list[b]}")
-    
-    # Before passing the images to the network, we need to register a forward hook
-    # The forward  hook is executed by the dnn  while the images are passed, 
-    # and return the activations from selected layers
-    
+
     # Here we get all the layer names we can extract activations from
     all_layer_names = get_last_level_layer_names(alex)
     print(all_layer_names)
     
     # Add in the list below all the layers we want to extract
     # Janini et al use all the ReLU stages 
-    layers_list = [all_layer_names[1], 
-                   all_layer_names[4], 
-                   all_layer_names[7], 
-                   all_layer_names[9], 
-                   all_layer_names[11],
-                   all_layer_names[16],
+    layers_list = [all_layer_names[1], all_layer_names[4],  all_layer_names[7], 
+                   all_layer_names[9], all_layer_names[11], all_layer_names[16],
                    all_layer_names[19]]
     
     # Get the activations

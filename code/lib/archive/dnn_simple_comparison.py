@@ -33,7 +33,10 @@ from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 from scipy.spatial.distance import pdist, squareform
-from activation_extraction import * 
+
+import sys
+sys.path.append('../../')
+from src.activation_extraction import * 
 
 
 ## Load AlexNet and relative wizardry 
@@ -55,12 +58,10 @@ imagenet_classes = json.loads(urllib.request.urlopen(url).read().decode())
 ## Load letters and check their pixels density 
 
 # Find paths for all scripts
-br_dir = "letters/braille" 
-br_paths = glob.glob(os.path.join(br_dir, '*_squared.png'))
-ln_dir = "letters/line"
-ln_paths = glob.glob(os.path.join(ln_dir, '*_squared.png'))
-lt_dir = "letters/latin"
-lt_paths = glob.glob(os.path.join(lt_dir, '*.png'))
+letters_dir = "../../../inputs/letters" 
+br_paths = glob.glob(os.path.join(letters_dir, '*_F5.png'))
+ln_paths = glob.glob(os.path.join(letters_dir, '*_F6.png'))
+lt_paths = glob.glob(os.path.join(letters_dir, '*_F1.png'))
 
 image_paths = br_paths + ln_paths + lt_paths
 
@@ -85,7 +86,7 @@ dataloader = DataLoader(dataset, batch_size = 78, shuffle = False)
 
 ## Feed images to the network and extract activations
 
-# For each batch
+# For each batch - technically only one batch
 for b, batch in enumerate(dataloader):
     
     # Before passing the images to the network, we need to register a forward hook

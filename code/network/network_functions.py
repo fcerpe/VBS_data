@@ -45,7 +45,7 @@ def network_train_alexnets(opt, script, nSub, epochs, lr, tr, bt):
     # Path to the dataset
     dataset_dir = opt['dir']['datasets']
     dataset_spec = script_values['dataset_spec']
-    dataset_path = f"{dataset_dir}/{dataset_spec}/"
+    dataset_path = f"{dataset_dir}/{dataset_spec}"
     
     # Path where to save the weights
     weights_dir = opt['dir']['weights']
@@ -60,7 +60,7 @@ def network_train_alexnets(opt, script, nSub, epochs, lr, tr, bt):
         
     # Start the logging 
     log_dir = opt['dir']['logs']
-    log = init_log(log_dir, notation)
+    log = init_log(log_dir, notation, nSub, 'alexnet')
     
     
     ## DATASET 
@@ -70,7 +70,7 @@ def network_train_alexnets(opt, script, nSub, epochs, lr, tr, bt):
     # done in the itreation loop, to randomize batches
     
     # IMPORTANT: paths are optimized to run on enuui, adjust if on a different system
-    latin, word_classes = import_dataset(dataset_path, 
+    latin, word_classes = import_dataset('../../inputs/datasets/LT/', 
                                          '../../inputs/words/nl_wordlist.csv')
     
     
@@ -244,7 +244,7 @@ def network_train_cornets(opt, script, nSub, epochs, lr, tr, bt):
         
     # Start the logging 
     log_dir = opt['dir']['logs']
-    log = init_log(log_dir, notation)
+    log = init_log(log_dir, notation, nSub, 'cornet')
     
     
     ## DATASET 
@@ -603,12 +603,12 @@ def reset_last_layer(model, model_name, num_classes):
 ### LOGGING
 
 # Open document and set header
-def init_log(log_dir, script): 
+def init_log(log_dir, script, nSub, model): 
     
     # get date time
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     
-    csv_file = f"{log_dir}/training-{script}_{timestamp}.csv"
+    csv_file = f"{log_dir}/model-{model}_training-{script}_subjects-{nSub}_date-{timestamp}.csv"
 
     # Headers for the CSV file
     headers = ["Script", "subject", "Epoch", "Train_Loss", "Train_Accuracy", "Val_Loss", "Val_Accuracy"]

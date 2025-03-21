@@ -88,53 +88,7 @@ plot <- function(data, title) {
   
 }
 
-multiplot <- function(d1,d2,d3,d4) {
-  d1$Source <- "d1"
-  d2$Source <- "d2"
-  d3$Source <- "d3"
-  d4$Source <- "d4"
-  
-  # Combine all datasets into one
-  combined_data <- rbind(d1, d2, d3, d4)
-  
-  # Define color and line type mappings
-  color_mapping <- c("d1" = "#FF9E4A", "d2" = "#FF9E4A", "d3" = "#69B5A2", "d4" = "#69B5A2")
-  linetype_mapping <- c("d1" = "solid", "d2" = "dashed", "d3" = "solid", "d4" = "dashed")
-  
-  # Custom legend labels
-  legend_labels <- c("d1" = "sub-1_braille", "d2" = "sub-2_braille", 
-                     "d3" = "sub-1_line", "d4" = "sub-2_line")
-  
-  # Create the plot
-  accuracy_plot <- ggplot(combined_data, aes(x = Epoch, y = Accuracy, color = Source, linetype = Source)) +
-    geom_line(size = 1) +  # Line plot with thickness
-    scale_color_manual(values = color_mapping, labels = legend_labels) +  # Custom color and labels
-    scale_linetype_manual(values = linetype_mapping, labels = legend_labels) +  # Custom linetype and labels
-    scale_x_continuous(
-      breaks = 1:10,  # Set x-axis ticks to 1 to 10
-      name = "Epoch"
-    ) +
-    labs(
-      title = "Validation Accuracy Over Epochs",
-      x = "Epoch",
-      y = "Accuracy",
-      color = "Dataset",
-      linetype = "Dataset"
-    ) +
-    theme_minimal() +  # Clean theme
-    theme(
-      text = element_text(size = 12),
-      plot.title = element_text(hjust = 0.5)
-    )
-  
-  # Display the plot
-  print(accuracy_plot)
-  
-  ggsave("subs-2_script-multiplot.png", width = 8, height = 6, dpi = 300)
-  
-}
-
-allplot <- function(statsIn) {
+totalplot <- function(statsIn) {
   
   custom_colors <- c("BR" = "#FF9E4A", "LN" = "#69B5A2")
   

@@ -57,7 +57,6 @@ def get_layer_activation_alexnet(model, layer_names, batch):
     activations = {name: [] for name in layer_names}
     hooks = []
 
-
     def get_activation(name):
         
         def hook(model, input, output):
