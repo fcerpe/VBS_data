@@ -293,7 +293,7 @@ def network_train_cornets(opt, script, nSub, epochs, lr, tr, bt):
 
         # If we're training the netwrok on Dutch only (latin based script),
         # take alexnet trained on imagenet and reset the last layer
-        if script == 'latin':
+        if script == 'latin2':
         
             # Apply ImageNet weights
             # Remember to unlock any datalad alias file
