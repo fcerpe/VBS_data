@@ -17,7 +17,6 @@ sys.path.append('../')
 from act_option import *
 from act_functions import * 
 
-import torch
 
 ### ---------------------------------------------------------------------------
 ### LOAD OPTIONS 

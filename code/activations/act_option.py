@@ -35,6 +35,7 @@ def act_option():
     opt['dir']['figures'] = os.path.join(opt['dir']['outputs'], 'figures')
     opt['dir']['weights'] = os.path.join(opt['dir']['outputs'], 'weights') 
     opt['dir']['logs'] = os.path.join(opt['dir']['outputs'], 'logs')
+    opt['dir']['results'] = os.path.join(opt['dir']['outputs'], 'results')
     
     opt['script'] = {'latin': {'dataset_spec': 'LT/', 
                                'notation': 'LT'},
