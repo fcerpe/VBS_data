@@ -15,6 +15,3 @@
 [submodule "code/lib/CORnet"]
 	path = code/lib/CORnet
 	url = git@github.com:dicarlolab/CORnet.git
-[submodule "code/lib/thingsvision"]
-	path = code/lib/thingsvision
-	url = git@github.com:ViCCo-Group/thingsvision.git

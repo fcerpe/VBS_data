@@ -6,16 +6,16 @@ Created on Tue Nov 12 10:41:33 2024
 @author: cerpelloni
 """
 import sys
-sys.path.append('../src')
+sys.path.append('../')
 
 import os
 import glob
 from PIL import Image
 
 import stim_functions as stim
-import resize_images as ri
+import src.resize_images as ri
 import dataset_functions as dataset
-import store_files as stf
+import src.store_files as stf
 
 ### ---------------------------------------------------------------------------
 ### CREATE WORD VARIATIONS
