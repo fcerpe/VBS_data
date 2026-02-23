@@ -21,15 +21,17 @@ from let_functions import *
 
 
 
-### ---------------------------------------------------------------------------
-### Load options 
+## ----------------------------------------------------------------------------
+## Load options 
 
 opt = vbs_option()
 
+extract_letters_activations(opt)
 
 
-### ---------------------------------------------------------------------------
-### Create stimuli
+
+## ----------------------------------------------------------------------------
+## Create stimuli
 
 # Starting from letter images in the Latin alphabet (Arial), Braille, Line Braille,
 # creave variations in thickness and size
@@ -39,29 +41,36 @@ opt = vbs_option()
 # - thickness variations
 # - size variations
 
-# create_letters_variations(opt, ['F1', 'F5', 'F6'], [3,6], [15,30])
+create_letters_variations(opt, ['F1', 'F5', 'F6'], [3,6], [15,30])
 
 
 # TODO resurface scripts that ensure that the letters are matched for pixel density
 
 
+## ----------------------------------------------------------------------------
+## Present stimuli to AlexNet
 
-### ---------------------------------------------------------------------------
-### Present stimuli to AlexNet
+# TODO description 
+# TODO check that let_variation_comparison and functions actually match
+
+extract_letters_activations(opt)
+
+
+## ----------------------------------------------------------------------------
+## Plot results
 
 # TODO description 
 
-# extract_letters_activations(opt)
-let_variations_comparison
+plot_letters_representations(opt)
 
 
+## ----------------------------------------------------------------------------
+## Compare representations of letters 
 
-### ---------------------------------------------------------------------------
-### Plot results
+# TODO add description
 
-# TODO description 
+stats_letters_representations(opt)
 
-plot_letters_activations()
 
 
 

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
+'''
 Created on Mon Mar 10 15:37:32 2025
 
 Visual Braille Silico - visualization functions
 
 @author: Filippo Cerpelloni
-"""
+'''
 # Import personal functions, then all libraries are coming from there
 import sys
 sys.path.append('../')
@@ -44,13 +44,99 @@ from PIL import Image
 from cornet import cornet_z
 
 
+
+### ---------------------------------------------------------------------------
+### Plot training stats
+
+# Learning curves specific for novel scripts
+def plot_anova_training(opt, results_path):
+    
+    # Load the results 
+    results = pd.read_csv(os.path.join(opt['dir']['results'], 'classifications', results_path))
+    
+    # From file path, extract model name and information for plotting
+    filename = results_path.split('_sub')[0]
+    model_name = filename.split('-')[1]
+    
+    # Consider only novel scripts, not LT 
+    # If AlexNet, we already know that performance is perferct. We mostly care 
+    # about the novel scripts. 
+    # Still TBD in CORnet
+    # results = results[(results['model_name'] == model_name) & (results['script'] != 'LT')]
+    
+    # Specify scripts colours
+    custom_palette = {
+        'LT': '#4C75B3', # Naive participant blue
+        'BR': '#FF9E4A', # CPP Orange
+        'LN': '#fb92ff'  # New pink
+    }
+    dodge_val = 0.2
+    jitter_val = 0.1
+
+    # Average and SD bars
+    point_plot = sns.pointplot(x = 'epoch', 
+                               y = 'score', 
+                               hue = 'script', 
+                               data = results, 
+                               dodge = dodge_val, 
+                               markers = 'o', 
+                               capsize = 0, 
+                               palette = custom_palette,
+                               markersize = 9, linewidth = 4,
+                               errorbar = 'sd',
+                               legend = False,
+                               zorder = 2)
+    
+    # Individual data points
+    strip_plot = sns.stripplot(x = 'epoch', 
+                               y = 'score', 
+                               hue = 'script', 
+                               data = results, 
+                               dodge = dodge_val, 
+                               jitter = jitter_val, 
+                               alpha = 0.4, 
+                               palette = custom_palette,
+                               legend = False,
+                               zorder = 1)
+
+
+    # Adjust dodge by separating the hues manually
+    for i, artist in enumerate(strip_plot.collections):
+        if i % 2 == 0: offset = -0.12  
+        else:          offset = 0.12
+        artist.set_offsets(artist.get_offsets() - np.array([offset, 0]))
+
+    # Customize plot
+    if model_name == 'alexnet': 
+        plt.xticks([0, 4, 9], ['11', '15', '20'], fontname = 'Avenir', fontsize = 12)
+    else:
+        plt.xticks([0, 4, 9, 14], ['1', '5', '10', '15'], fontname = 'Avenir', fontsize = 12)
+    plt.yticks(fontname = 'Avenir', fontsize = 12)
+    
+    # Add axes labels and title
+    plt.xlabel('Epoch', fontname = 'Avenir', fontsize = 16)
+    plt.ylabel('Accuracy', fontname = 'Avenir', fontsize = 16)
+    # plt.title(f'{model_name} - accuracies across epochs')
+
+    # Customize x-axis ticks, accoid half-days
+
+
+    # Save plot
+    plt.savefig(os.path.join(opt['dir']['figures'], f'{filename}_plot-learning-comparison-novel-scripts.png'), 
+                dpi = 400)
+    
+    # Display the plot
+    plt.show()
+    
+
             
+
 ### ---------------------------------------------------------------------------
 ### Learning curves
 
 ## Obsolete: plot the curves for literacy and Braille expertise for AlexNet
 def plot_braille_expertise(opt, lt_training, br_training): 
-    """
+    '''
     Plot the learning curves for Latin script alone and Latin + Braille scripts
     (used in Figure 2 of CCN 2025 Extended Abstract). It's a static figure so it 
     requires fewer arguments (e.g. it's for AlexNet alone for sure)
@@ -68,7 +154,7 @@ def plot_braille_expertise(opt, lt_training, br_training):
     Outputs
     -------
     Figure, saved also in outputs/figures
-    """
+    '''
     
     ##  Open literacy and expertise logs
     lt = pd.read_csv(os.path.join(opt['dir']['logs'], lt_training))
@@ -128,7 +214,7 @@ def plot_braille_expertise(opt, lt_training, br_training):
              ha = 'center', fontsize = 15, fontname = 'Avenir')
     
     # Save the plot
-    plt.savefig("../../outputs/figures/ccn-abstract_fig-2_model-alexnet_plot-joint-learning-braille.png", 
+    plt.savefig('../../outputs/figures/ccn-abstract_fig-2_model-alexnet_plot-joint-learning-braille.png', 
                 dpi = 600, bbox_inches = 'tight')
     
     # Show the plot
@@ -137,7 +223,7 @@ def plot_braille_expertise(opt, lt_training, br_training):
 
 ## Plot AlexNet trainings on literacy and expertise
 def plot_alexnet_training(opt, lt_training, br_training, ln_training): 
-    """
+    '''
     Plot the learning curves of Latin alphabet alone, plus the addition of 
     Latin + Braille and Latin + Line datasets.
     For AlexNet only. 
@@ -159,7 +245,7 @@ def plot_alexnet_training(opt, lt_training, br_training, ln_training):
     -------
     Figure, saved in outputs/figures
     
-    """
+    '''
     
     ##  Open literacy and expertise logs
     lt = pd.read_csv(os.path.join(opt['dir']['logs'], lt_training))
@@ -224,7 +310,7 @@ def plot_alexnet_training(opt, lt_training, br_training, ln_training):
     
 ## Plot CORnet trainings on literacy and expertise
 def plot_cornet_training(opt, lt_training, br_training, ln_training): 
-    """
+    '''
     Plot the learning curves of Latin alphabet alone, plus the addition of 
     Latin + Braille and Latin + Line datasets.
     For CORnet only. 
@@ -246,7 +332,7 @@ def plot_cornet_training(opt, lt_training, br_training, ln_training):
     -------
     Figure, saved in outputs/figures
     
-    """
+    '''
     ##  Open literacy and expertise logs
     lt = pd.read_csv(os.path.join(opt['dir']['logs'], lt_training))
     br = pd.read_csv(os.path.join(opt['dir']['logs'], br_training))
@@ -298,15 +384,15 @@ def plot_cornet_training(opt, lt_training, br_training, ln_training):
     
     # Show the plot
     plt.show()
-
-
+    
+    
 
 ### ---------------------------------------------------------------------------
 ### Clustering
        
 ## Plot clustering evolution across layers 
 def plot_clustering(opt, model_name, exp_clusters, ctr_clusters):
-    """
+    '''
     Plot the clustering curve for two curves for Latin script, Latin + Braille 
     and Latin + Line trainings
     
@@ -329,7 +415,7 @@ def plot_clustering(opt, model_name, exp_clusters, ctr_clusters):
     -------
     Figure, saved also in outputs/figures
     
-    """
+    '''
     
     ##  Open clustering results
     exp_clu = pd.read_csv(os.path.join(opt['dir']['results'], 'clustering', exp_clusters))
@@ -419,7 +505,7 @@ def plot_clustering(opt, model_name, exp_clusters, ctr_clusters):
        
 # Plot clustering evolution across layers, for one script only
 def plot_clustering_script(opt, model_name, script, exp_clusters, ctr_clusters):
-    """
+    '''
     Plot the clustering curve for two curves for Latin script, Latin + Braille 
     and Latin + Line trainings
     
@@ -444,7 +530,7 @@ def plot_clustering_script(opt, model_name, script, exp_clusters, ctr_clusters):
     -------
     Figure, saved also in outputs/figures
     
-    """
+    '''
     
     ##  Open clustering results
     exp_clu = pd.read_csv(os.path.join(opt['dir']['results'], 'clustering', exp_clusters))
@@ -532,7 +618,7 @@ def plot_clustering_script(opt, model_name, script, exp_clusters, ctr_clusters):
 
 ## Plot mean dissimilarity across layers 
 def plot_mean_dissimilarity(opt, model_name, exp_scores, ctr_scores):
-    """
+    '''
     Plot the clustering curve for two curves for Latin script, Latin + Braille 
     and Latin + Line trainings
     
@@ -553,7 +639,7 @@ def plot_mean_dissimilarity(opt, model_name, exp_scores, ctr_scores):
     -------
     Figure, saved also in outputs/figures
     
-    """
+    '''
     
     ##  Open dissmilarity scores
     exp_diss = pd.read_csv(os.path.join(opt['dir']['results'], 'distances', exp_scores))
@@ -645,7 +731,7 @@ def plot_mean_dissimilarity(opt, model_name, exp_scores, ctr_scores):
 
 ## Plot the distance matrices of a model at different stages
 def plot_stimuli_distances(opt, distances):
-    """
+    '''
     Plot the distances between stimuli for each layer (single subject)
     TODO expand to all the subjects
     
@@ -659,7 +745,7 @@ def plot_stimuli_distances(opt, distances):
     -------
     Figures for each script and layer, also saved in outputs/figures/distances
     
-    """
+    '''
 
     # Load the distances 
     dist = load_activations(os.path.join(opt['dir']['results'], 'distances', distances))
@@ -691,7 +777,7 @@ def plot_stimuli_distances(opt, distances):
     
 ## Plot average matrix across  
 def plot_category_distances(opt, model_name, training, activations): 
-    """
+    '''
     Plot the distances between categories for each layer and script, averaged across subjects
     
     Parameters
@@ -709,7 +795,7 @@ def plot_category_distances(opt, model_name, training, activations):
     -------
     Figures for each script and layer, also saved in outputs/figures/distances
     
-    """
+    '''
     
     # Determine color of the RDM based on expertise
     if training == 'LT': exp = False
@@ -741,7 +827,7 @@ def plot_category_distances(opt, model_name, training, activations):
 ## Plot the RDM of a given matrix of dissimilarities between stimuli 
 # TODO: improve function, like plot_rdm_categories
 def plot_rdm_stimuli(opt, matrix, stim_labels, fileinfo, layer, script):
-    """
+    '''
     Plot a 48-by-48 RDM: one script, one layer, all the stimuli (averaged across variations)
     
     Parameters
@@ -762,7 +848,7 @@ def plot_rdm_stimuli(opt, matrix, stim_labels, fileinfo, layer, script):
     -------
     Figure for the requested RDM, also saved in outputs/figures/distances
     
-    """
+    '''
     
     # Start plotting 
     plt.figure()
@@ -821,7 +907,7 @@ def plot_rdm_stimuli(opt, matrix, stim_labels, fileinfo, layer, script):
 
 ## Plot the RDM of a given matrix of dissimilarities between categories of stimuli 
 def plot_rdm_categories(opt, matrix, color_name, savename):
-    """
+    '''
     Plot a 4-by-4 RDM: one script, one layer, averages of within-category distances.
     
     Parameters
@@ -838,7 +924,7 @@ def plot_rdm_categories(opt, matrix, color_name, savename):
     -------
     Figure for the requested RDM, also saved in outputs/figures/distances
     
-    """
+    '''
     # Select colour
     colors = {'orange': '#FF9E4A',        
               'green': '#69B5A2',
@@ -847,7 +933,7 @@ def plot_rdm_categories(opt, matrix, color_name, savename):
               'basic': '#000000'}
     
     # Create a custom colormap from white to the custom color
-    custom_cmap = LinearSegmentedColormap.from_list("custom_cmap", ["white", colors[f'{color_name}']])
+    custom_cmap = LinearSegmentedColormap.from_list('custom_cmap', ['white', colors[f'{color_name}']])
 
     
     # Start plotting 
@@ -893,7 +979,7 @@ def plot_rdm_categories(opt, matrix, color_name, savename):
 
 ## Extract relevant logs from query
 def logs_query(opt, model_name, script_trained):
-    """
+    '''
     From the logs folder, extract the learning reports that match the 
     model and script trained
     
@@ -910,22 +996,22 @@ def logs_query(opt, model_name, script_trained):
     -------
     trainings (list): list of paths to the files correspondingto the query
     
-    """
+    '''
     
     # Match pattern
-    pattern = f"model-{model_name}_training-{script_trained}_*"
+    pattern = f'model-{model_name}_training-{script_trained}_*'
     trainings = [os.path.basename(f) for f in glob.glob(os.path.join(opt['dir']['logs'], pattern))]
     
     # Sort files based on the timestamp at the end
     trainings.sort(key = lambda x: re.search(r'\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}', x).group() 
-                   if re.search(r'\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}', x) else "")
+                   if re.search(r'\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}', x) else '')
     
     return trainings
 
 
 ## Concatenate multiple log files into one
 def concatenate_trainings(opt, training_list):
-    """
+    '''
     Concatenate a list of training logs, to get a single file for all the subjects
     
     Parameters
@@ -938,7 +1024,7 @@ def concatenate_trainings(opt, training_list):
     -------
     table in csv file containing the concatenated training logs
     
-    """
+    '''
     
     # Savename for the concatenated trainings: take the last training and rename it
     savename = tr_list[-1]
@@ -957,7 +1043,7 @@ def concatenate_trainings(opt, training_list):
 
 ## Differentiate subject numbers 
 def reassing_subject(opt, training_list):
-    """
+    '''
     Fix for a bug in the early logging of files: 
     function changes the subject number within the log to avoid mistaking networks
     
@@ -971,7 +1057,7 @@ def reassing_subject(opt, training_list):
     -------
     table in csv file containing the training logs with the correct subject ID
     
-    """
+    '''
     
     # Open each file in the list of trainings
     for i, tr in enumerate(training_list):
@@ -980,9 +1066,9 @@ def reassing_subject(opt, training_list):
         training = pd.read_csv(os.path.join(opt['dir']['logs'], tr))
         
         # Change the subject ID to the corresponding of the iteration (i.e. from 0 to 4)
-        if "subject" in training.columns:
+        if 'subject' in training.columns:
             
-            training["subject"] = i
+            training['subject'] = i
             
             # Save the log with the new subject ID
             training.to_csv(os.path.join(opt['dir']['logs'], tr), index = False)

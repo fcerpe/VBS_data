@@ -23,21 +23,19 @@ from stats_functions import *
 
 opt = vbs_option()
 
-# stats_correlate_distances(opt, 
-#                           'model-alexnet_sub-all_training-LTBR_test-VBE_epoch-last_data-distances_average-categories_method-euclidean.pkl',
-#                           'model-alexnet_sub-all_training-LT_test-VBE_epoch-last_data-distances_average-categories_method-euclidean.pkl')
 
-# stats_correlate_distances(opt, 
-#                           'model-cornet_sub-all_training-LTBR_test-VBE_epoch-last_data-distances_average-categories_method-euclidean.pkl',
-#                           'model-cornet_sub-all_training-LT_test-VBE_epoch-last_data-distances_average-categories_method-euclidean.pkl')
 
-stats_correlate_model(opt, 
-                          'model-cornet_sub-all_training-LTBR_test-VBE_epoch-last_data-distances_average-categories_method-euclidean.pkl',
-                          'model-cornet_sub-all_training-LT_test-VBE_epoch-last_data-distances_average-categories_method-euclidean.pkl')
+### ---------------------------------------------------------------------------
+### Learning curves across scripts and expertises
 
-stats_correlate_model(opt, 
-                          'model-alexnet_sub-all_training-LTBR_test-VBE_epoch-last_data-distances_average-categories_method-euclidean.pkl',
-                          'model-alexnet_sub-all_training-LT_test-VBE_epoch-last_data-distances_average-categories_method-euclidean.pkl')
+# TODO add description
+
+## Alexnet models
+stats_compare_trainings(opt, 'alexnet', 'VBT')
+
+## CORnet models
+stats_compare_trainings(opt, 'cornet', 'VBT')
+
 
 
 ### ---------------------------------------------------------------------------
@@ -95,6 +93,8 @@ stats_descriptive_clustering(opt,
 ### ---------------------------------------------------------------------------
 ### Dissimilarity 
 
+# TODO add description
+
 ## AlexNet models 
 
 stats_dissimilarity_scores(opt, 'alexnet', 'LT', 'VBE', 'correlation')
@@ -112,7 +112,31 @@ stats_dissimilarity_scores(opt, 'cornet', 'LTBR', 'VBE', 'euclidean')
 
 
 
+### ---------------------------------------------------------------------------
+### Correlations between RDMs
 
+# TODO add description
+
+## AlexNet models 
+
+stats_correlate_distances(opt, 
+                          'model-alexnet_sub-all_training-LTBR_test-VBE_epoch-last_data-distances_average-categories_method-euclidean.pkl',
+                          'model-alexnet_sub-all_training-LT_test-VBE_epoch-last_data-distances_average-categories_method-euclidean.pkl')
+
+stats_correlate_distances(opt, 
+                          'model-cornet_sub-all_training-LTBR_test-VBE_epoch-last_data-distances_average-categories_method-euclidean.pkl',
+                          'model-cornet_sub-all_training-LT_test-VBE_epoch-last_data-distances_average-categories_method-euclidean.pkl')
+
+
+## CORnet models 
+
+stats_correlate_model(opt, 
+                      'model-cornet_sub-all_training-LTBR_test-VBE_epoch-last_data-distances_average-categories_method-euclidean.pkl',
+                      'model-cornet_sub-all_training-LT_test-VBE_epoch-last_data-distances_average-categories_method-euclidean.pkl')
+
+stats_correlate_model(opt, 
+                      'model-alexnet_sub-all_training-LTBR_test-VBE_epoch-last_data-distances_average-categories_method-euclidean.pkl',
+                      'model-alexnet_sub-all_training-LT_test-VBE_epoch-last_data-distances_average-categories_method-euclidean.pkl')
 
 
 

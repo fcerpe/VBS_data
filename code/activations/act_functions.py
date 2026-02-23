@@ -284,25 +284,9 @@ def extract_performances(opt, model_name, subID, training, test, epoch):
     None, saves performances in outputs/results/classifications
     
     """
-    # TODO incorporate predicted classes
-    # probabilities = alexnet(batch)
-    # # To get the predicted label for each image, need to transform probabilities 
-    # # into a single number. To do this, get the index of the highest probability class
-    # predictions_idx = torch.argmax(probabilities, dim = 1)
-    # # Now, we need to map these indices to the actual ImageNet class labels
-    # predicted_classes = [imagenet_classes[idx] for idx in predictions_idx]
-    # print(predicted_classes)
     
-    # Set all the important specifics of where to find data, like test set to load 
-    dataset_path, dataset_spec = get_paths(opt, test)
-        
-    # TODO: Check if the test folder is zipped. If so, unzp it
-
-    # Initialize storage dictionaries
-    flat_dict = {}  # Flattened activations
-    stim_dict = {}  # Averages across variations for each stimulus
-    dist_dict = {}  # Distance between stimuli based on Janini et al. 2022
-
+    # TODO make more verbose, specify epochs and scripts
+   
     # Process a single subject/iteration (otherwise kernel breaks)
     if not subID in opt['subjects']:
         print('Error, we do not have that many iterations of the network.')
@@ -312,56 +296,94 @@ def extract_performances(opt, model_name, subID, training, test, epoch):
 
     # Inform the user
     print(f'Extracting performance of network from sub-{s}\n')
-    print(f'Loading the dataset ...\n')
-
-    # Load the dataset
-    # Batch size is fixed at 55, to process all the size variations of a stimulus together
-    # resulting in 5 batches for each stimulus (e.g. one real word in one script)
-    dataset, data_loader = load_dataset(dataset_path, dataset_spec)
+    print(f'Loading the model ...\n')
 
     # Choose the model
     model = get_weighted_model(opt, model_name, s, training, test, epoch)
-
-    # Load the labels for the individual images and for the classes of stimuli
-    image_labels = pd.read_csv(f'../../inputs/words/{dataset_spec}_stimuli.csv')
-
+    
+    if test == 'VBT':
+        if training == 'LTBR':   scripts = ['LT','BR']
+        elif training == 'LTLN': scripts = ['LT','LN']
+        else:                    scripts = ['LT']
+    
+    # Initialize storage dictionaries
+    flat_dict = {}  # Flattened activations
+    stim_dict = {}  # Averages across variations for each stimulus
+    idx_dict = {}  # Distance between stimuli based on Janini et al. 2022
+    
     # Initialize subject-specific dictionaries
     flat_dict[f'sub-{s}'] = {}
     stim_dict[f'sub-{s}'] = {}
-    dist_dict[f'sub-{s}'] = {}
+    idx_dict[f'sub-{s}'] = {}
+        
+    ## Test scripts independently, doesn't matter the responses will be merged / 
+    # compared later
+    for scr in scripts: 
     
-    # Inform the user
-    print(f'Presenting the images to the network ...\n')
+        # Set all the important specifics of where to find data, like test set to load 
+        dataset_path, dataset_spec = get_paths(opt, test)
+        
+        # Adjust to the script
+        dataset_path = dataset_path + f'_{scr}'
+        dataset_spec = dataset_spec + f'_{scr}'
+            
+        # Load the dataset
+        print(f'Loading the dataset ...\n')
+        
+        # Batch size is fixed at 55, to process all the size variations of a stimulus together
+        # resulting in 5 batches for each stimulus (e.g. one real word in one script)
+        dataset, data_loader = load_dataset(dataset_path, dataset_spec)
+    
+        # Load the labels for the individual images and for the classes of stimuli
+        image_labels = pd.read_csv(f'../../inputs/words/{dataset_spec}_stimuli.csv')
+        
+        class_labels = pd.read_csv('../../inputs/words/test_vbt_wordlist.csv', header = None)
+        
+        # Inform the user
+        print(f'Testing the network ...\n')
+        
+        # Cache to save the performances for a full word
+        word_idxs = []
+        word_id = 0
+    
+        ## Feed images to the network and extract activations
+        for b, batch in enumerate(data_loader):
+    
+            # Extract performances: let the network process the images and get the
+            # final classification for each stimulus
+            performances = model(batch)
+            performances_idx = torch.argmax(performances, dim = 1).numpy()
+            
+            # Add to a cahce of the other variations of the same word
+            word_idxs.extend(performances_idx)
+            
+            # Store information in a series of dictionaries, to ease stats
+            # Common structure to all the dicts is:
+            flat_dict = store_performances(performances, image_labels, b, s, scr, flat_dict)
+            idx_dict = store_indices(performances_idx, image_labels, b, s, scr, idx_dict)
+            
+        # Compute number of correct classifications    
+        print('Computing correct classifications ...\n')
+                
+        stim_dict = correct_performances(stim_dict, class_labels, s, scr, idx_dict)
 
-    ## Feed images to the network and extract activations
-    for b, batch in enumerate(data_loader):
-
-        # Extract performances: let the network process the images and get the
-        # final classification for each stimulus
-        performances = model(batch)
-
-        # Store information in a series of dictionaries, to ease stats
-        # Common structure to all the dicts is:
-        flat_dict = store_performances(performances, image_labels, b, s, flat_dict)
-
-    ## Average activations across all variations
-    print('Computing averages for each stimulus ...\n')
-
-    # Compute averages for each stimulus
-    stim_dict[f'sub-{s}'] = average_performances(flat_dict[f'sub-{s}'])
-                                                                                    
     ## Save subject-specifc activations and matrices
     print('Saving subject performances ...\n')
     
     save_single_extraction(opt, flat_dict[f'sub-{s}'], 
-                           model_name, s, training, test, epoch,
+                           model_name, s, training, 'VBT', epoch,
                            'classifications',
                            'flat-classifications')
     
-    save_single_extraction(opt, stim_dict[f'sub-{s}'], 
-                           model_name, s, training, test, epoch,
+    save_single_extraction(opt, idx_dict[f'sub-{s}'], 
+                           model_name, s, training, 'VBT', epoch,
                            'classifications',
-                           'stimulus-average-classifications')
+                           'flat-responses')
+    
+    save_single_extraction(opt, stim_dict[f'sub-{s}'], 
+                           model_name, s, training, 'VBT', epoch,
+                           'classifications',
+                           'corrected-responses')
 
     print('Extraction completed.\n\n')
 
@@ -470,7 +492,7 @@ def get_paths(opt, test):
     # Test-sepcific directory: VBE or VBT
     if test == 'VBE':   dataset_spec = 'test_vbe'
     elif test == 'VBT': dataset_spec = 'test_vbt'
-    else:               print('ERROR: dataset not found')
+    else:               dataset_spec = test
 
     # Full dataset path: quick workaround f'{} error
     dataset_dir = opt['dir']['datasets']
@@ -1172,7 +1194,7 @@ def compute_distance_subjects(opt, model_name, training, test, epoch, method):
 ### Classification functions
 
 ## Store the activations in nested dictionaries
-def store_performances(performances, labels, b, s, flat):
+def store_performances(performances, labels, b, s, scr, flat):
     """
     Store the performances in a orderly manner that considers subject and stimulus
 
@@ -1197,29 +1219,19 @@ def store_performances(performances, labels, b, s, flat):
     # Get the label of the stimulus presented, with size variation
     example = labels['Stimulus'][b*55]
     parts = example.split('_')
-    scr = parts[2]
-    cat = parts[0]
     wrd = parts[1]
     size = parts[3]
-    
-    # Verbalize script and category
-    if scr == 'F1':   scr = 'LT'
-    elif scr == 'F5': scr = 'BR'
-    else:             scr = 'LN'
-    
-    if cat == 'S': cat = 'seen'
-    elif cat == 'N': cat = 'novel'
-    else:            cat = 'pseudo'
-    
+            
     # Compose stimulus name
-    stim = f'{scr}_{cat}_{wrd}'
+    stim = f'{wrd}'
 
     # If it's the first batch of this stimulus, initialize the dictionary for 
     # the specific stimulus 
-    if size == 'S1': flat[f'sub-{s}'][f'{stim}'] = {}
+    if b == 0: flat[f'sub-{s}'][scr] = {}
+    if size == 'S1': flat[f'sub-{s}'][scr][stim] = {}
 
     # Size will always be a new entry
-    flat[f'sub-{s}'][f'{stim}'][f'{size}'] = {}
+    flat[f'sub-{s}'][scr][stim][size] = {}
 
     # Assign the 55 rows of each batch to the corresponding X and Y positions
     # Define the labels to assign
@@ -1231,46 +1243,90 @@ def store_performances(performances, labels, b, s, flat):
 
     # Save 'flattened' activations
     for idx, (x, y) in enumerate([(x, y) for x in x_labels for y in y_labels]):
-        flat[f'sub-{s}'][f'{stim}'][f'{size}'].setdefault(x, {})[y] = performances[idx]
+        flat[f'sub-{s}'][scr][stim][size].setdefault(x, {})[y] = performances[idx]
 
     return flat 
 
 
+## Store the activations indices in nested dictionaries
+def store_indices(performances, labels, b, s, scr, idx):
+    """
+    Store the performances in a orderly manner that considers subject and stimulus
+
+    Parameters
+    ----------
+    performances (torch.nn.Module): the classification of images in a batch
+    
+    labels (list): the list of image names
+    
+    b (int): the number of batch processed, to create new sub-dictionaries
+    
+    s (int): the subject number
+    
+    flat (dict): the dictionary storing all the flat activations
+
+    Outputs
+    ----------
+    flat (dict): the dictionary storing all the flat activations now updated
+                 with the activations from this batch
+    """
+
+    # Get the label of the stimulus presented, with size variation
+    example = labels['Stimulus'][b*55]
+    parts = example.split('_')
+    wrd = parts[1]
+    size = parts[3]
+            
+    # Compose stimulus name
+    stim = f'{wrd}'
+
+    # If it's the first batch of this stimulus, initialize the dictionary for 
+    # the specific stimulus 
+    if b == 0: idx[f'sub-{s}'][f'{scr}'] = {}
+    if size == 'S1': idx[f'sub-{s}'][f'{scr}'][f'{stim}'] = {}
+
+    # Size will always be a new entry
+    idx[f'sub-{s}'][f'{scr}'][f'{stim}'][f'{size}'] = performances
+
+    return idx 
+
+
 ## Compute averages across stimuli variations to obtain stimulus-identity performance
-def average_performances(in_dict): 
+def correct_performances(stim_dict, class_labels, s, scr, idx_dict): 
     """
     Compute the average performance for one stimulus across all the variations 
     in size, position in which it is presented to the network
     
     Parameters
     ----------
-    flat_dict (dict): the dictionary with arrays of activations for each 
+    idx_dict (dict): the dictionary with arrays of activations for each 
                       stimulus variation
     
     Outputs
     ----------
-    out_dict (dict): the dictionary containing the averages, one array for one 
+    stim_dict (dict): the dictionary containing the averages, one array for one 
                      stimulus across all it's variations
     """
     
-    # Copy the structure of the flat dictionary
-    # Scroll through every stimulus and get all the values out and averaged
-    out_dict = {}
+    responses = {}
+    stim_dict[f'sub-{s}'][f'{scr}'] = {}
     
-    for stim, stim_dict in in_dict.items():
-        performances = []
-
-        # go into each variation and extract the activation array
-        for size in stim_dict.values():
-            for x in size.values():
-                for y in x.values():
-
-                    # Append the values to a numpy list, to ease averaging
-                    performances.append(np.array(y))
-
-        out_dict[stim] = np.mean(performances, axis = 0)
+    # Concatenate responses to different sizes of the same word
+    for w, word in idx_dict[f'sub-{s}'][scr].items(): 
+        arrays = []
+        
+        for sz in idx_dict[f'sub-{s}'][scr][w].values():
+            arrays.append(sz)
     
-    return out_dict
+        responses[w] = np.concatenate([a.ravel() for a in arrays])
+
+        # Extract correct label from the wordlist, given a response 
+        label_id = class_labels.loc[class_labels[0] == w, 1].values
+    
+        # compute correct answers 
+        stim_dict[f'sub-{s}'][f'{scr}'][w] = np.sum(responses[w] == label_id) / len(responses[w])
+        
+    return stim_dict
 
 
 

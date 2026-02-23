@@ -95,25 +95,18 @@ cornet_activations(opt, 'cornet', 4, 'LT', 'VBE', 'last', 'euclidean')
 # of the accuracy's plateau, end of training
 
 # Latin+Braille training: expert networks
-extract_timepoint_performances(opt, 'alexnet', 0, 'LTBR', 'VBT', [11, 12, 15, 20])
-extract_timepoint_performances(opt, 'alexnet', 1, 'LTBR', 'VBT', [11, 12, 15, 20])
-extract_timepoint_performances(opt, 'alexnet', 2, 'LTBR', 'VBT', [11, 12, 15, 20])
-extract_timepoint_performances(opt, 'alexnet', 3, 'LTBR', 'VBT', [11, 12, 15, 20])
-extract_timepoint_performances(opt, 'alexnet', 4, 'LTBR', 'VBT', [11, 12, 15, 20])
+extract_timepoint_performances(opt, 'alexnet', 0, 'LTBR', 'VBT', [13, 14, 16, 17, 18, 19])
+extract_timepoint_performances(opt, 'alexnet', 1, 'LTBR', 'VBT', [13, 14, 16, 17, 18, 19])
+extract_timepoint_performances(opt, 'alexnet', 2, 'LTBR', 'VBT', [13, 14, 16, 17, 18, 19])
+extract_timepoint_performances(opt, 'alexnet', 3, 'LTBR', 'VBT', [13, 14, 16, 17, 18, 19])
+extract_timepoint_performances(opt, 'alexnet', 4, 'LTBR', 'VBT', [13, 14, 16, 17, 18, 19])
 
 # Latin+Line training: expert networks
-extract_timepoint_performances(opt, 'alexnet', 0, 'LTLN', 'VBT', [11, 12, 15, 20])
-extract_timepoint_performances(opt, 'alexnet', 1, 'LTLN', 'VBT', [11, 12, 15, 20])
-extract_timepoint_performances(opt, 'alexnet', 2, 'LTLN', 'VBT', [11, 12, 15, 20])
-extract_timepoint_performances(opt, 'alexnet', 3, 'LTLN', 'VBT', [11, 12, 15, 20])
-extract_timepoint_performances(opt, 'alexnet', 4, 'LTLN', 'VBT', [11, 12, 15, 20])
-
-# Latin script training: naive networks
-extract_timepoint_performances(opt, 'alexnet', 0, 'LT', 'VBT', [11, 12, 15, 20])
-extract_timepoint_performances(opt, 'alexnet', 1, 'LT', 'VBT', [11, 12, 15, 20])
-extract_timepoint_performances(opt, 'alexnet', 2, 'LT', 'VBT', [11, 12, 15, 20])
-extract_timepoint_performances(opt, 'alexnet', 3, 'LT', 'VBT', [11, 12, 15, 20])
-extract_timepoint_performances(opt, 'alexnet', 4, 'LT', 'VBT', [11, 12, 15, 20])
+extract_timepoint_performances(opt, 'alexnet', 0, 'LTLN', 'VBT', [13, 14, 16, 17, 18, 19])
+extract_timepoint_performances(opt, 'alexnet', 1, 'LTLN', 'VBT', [13, 14, 16, 17, 18, 19])
+extract_timepoint_performances(opt, 'alexnet', 2, 'LTLN', 'VBT', [13, 14, 16, 17, 18, 19])
+extract_timepoint_performances(opt, 'alexnet', 3, 'LTLN', 'VBT', [13, 14, 16, 17, 18, 19])
+extract_timepoint_performances(opt, 'alexnet', 4, 'LTLN', 'VBT', [13, 14, 16, 17, 18, 19])
 
 
 ## CORnet Z models 
@@ -121,25 +114,25 @@ extract_timepoint_performances(opt, 'alexnet', 4, 'LT', 'VBT', [11, 12, 15, 20])
 # between scripts (epochs 5 adn 10), end of training
 
 # Latin+Braille training: expert networks
-extract_timepoint_performances(opt, 'cornet', 0, 'LTBR', 'VBT', [1, 2, 5, 10, 15])
-extract_timepoint_performances(opt, 'cornet', 1, 'LTBR', 'VBT', [1, 2, 5, 10, 15])
-extract_timepoint_performances(opt, 'cornet', 2, 'LTBR', 'VBT', [1, 2, 5, 10, 15])
-extract_timepoint_performances(opt, 'cornet', 3, 'LTBR', 'VBT', [1, 2, 5, 10, 15])
-extract_timepoint_performances(opt, 'cornet', 4, 'LTBR', 'VBT', [1, 2, 5, 10, 15])
+extract_timepoint_performances(opt, 'cornet', 0, 'LTBR', 'VBT', [3, 4, 6, 7, 8, 9, 11, 12, 13, 14])
+extract_timepoint_performances(opt, 'cornet', 1, 'LTBR', 'VBT', [3, 4, 6, 7, 8, 9, 11, 12, 13, 14])
+extract_timepoint_performances(opt, 'cornet', 2, 'LTBR', 'VBT', [3, 4, 6, 7, 8, 9, 11, 12, 13, 14])
+extract_timepoint_performances(opt, 'cornet', 3, 'LTBR', 'VBT', [3, 4, 6, 7, 8, 9, 11, 12, 13, 14])
+extract_timepoint_performances(opt, 'cornet', 4, 'LTBR', 'VBT', [3, 4, 6, 7, 8, 9, 11, 12, 13, 14])
 
 # Latin+Line training: expert networks
-extract_timepoint_performances(opt, 'cornet', 0, 'LTLN', 'VBT', [1, 2, 5, 10, 15])
-extract_timepoint_performances(opt, 'cornet', 1, 'LTLN', 'VBT', [1, 2, 5, 10, 15])
-extract_timepoint_performances(opt, 'cornet', 2, 'LTLN', 'VBT', [1, 2, 5, 10, 15])
-extract_timepoint_performances(opt, 'cornet', 3, 'LTLN', 'VBT', [1, 2, 5, 10, 15])
-extract_timepoint_performances(opt, 'cornet', 4, 'LTLN', 'VBT', [1, 2, 5, 10, 15])
+extract_timepoint_performances(opt, 'cornet', 0, 'LTLN', 'VBT', [3, 4, 6, 7, 8, 9, 11, 12, 13, 14])
+extract_timepoint_performances(opt, 'cornet', 1, 'LTLN', 'VBT', [3, 4, 6, 7, 8, 9, 11, 12, 13, 14])
+extract_timepoint_performances(opt, 'cornet', 2, 'LTLN', 'VBT', [3, 4, 6, 7, 8, 9, 11, 12, 13, 14])
+extract_timepoint_performances(opt, 'cornet', 3, 'LTLN', 'VBT', [3, 4, 6, 7, 8, 9, 11, 12, 13, 14])
+extract_timepoint_performances(opt, 'cornet', 4, 'LTLN', 'VBT', [3, 4, 6, 7, 8, 9, 11, 12, 13, 14])
 
 # Latin script training: naive networks
-extract_timepoint_performances(opt, 'cornet', 0, 'LT', 'VBT', [1, 2, 5, 10, 15])
-extract_timepoint_performances(opt, 'cornet', 1, 'LT', 'VBT', [1, 2, 5, 10, 15])
-extract_timepoint_performances(opt, 'cornet', 2, 'LT', 'VBT', [1, 2, 5, 10, 15])
-extract_timepoint_performances(opt, 'cornet', 3, 'LT', 'VBT', [1, 2, 5, 10, 15])
-extract_timepoint_performances(opt, 'cornet', 4, 'LT', 'VBT', [1, 2, 5, 10, 15])
+extract_timepoint_performances(opt, 'cornet', 0, 'LT', 'VBT', [3, 4, 6, 7, 8, 9, 11, 12, 13, 14])
+extract_timepoint_performances(opt, 'cornet', 1, 'LT', 'VBT', [3, 4, 6, 7, 8, 9, 11, 12, 13, 14])
+extract_timepoint_performances(opt, 'cornet', 2, 'LT', 'VBT', [3, 4, 6, 7, 8, 9, 11, 12, 13, 14])
+extract_timepoint_performances(opt, 'cornet', 3, 'LT', 'VBT', [3, 4, 6, 7, 8, 9, 11, 12, 13, 14])
+extract_timepoint_performances(opt, 'cornet', 4, 'LT', 'VBT', [3, 4, 6, 7, 8, 9, 11, 12, 13, 14])
 
 
 

@@ -37,9 +37,11 @@ from PIL import Image
 from scipy.spatial.distance import pdist, squareform
 from natsort import natsorted
 
+from itertools import combinations
+from collections import defaultdict
+from statsmodels.stats.multitest import multipletests
 
 from scipy.stats import sem
-
 
 
 
@@ -149,7 +151,7 @@ def extract_letters_activations(opt):
 
     # Load images from letters dataset
     letters_paths = natsorted(glob.glob(os.path.join(opt['dir']['datasets'], 'letters', '*.png')))
-
+    
     # Load the images in memory
     images = [Image.open(letter).convert('RGB') for letter in letters_paths]
     
@@ -189,7 +191,7 @@ def extract_letters_activations(opt):
         
         # Store information in a series of dictionaries, to ease stats
         # Common structure to all the dicts is:
-        # dict[layer][subject][stimulus][size][x position][y position] = activation for image in layer
+        # dict[layer][stimulus][size][x position][y position] = activation for image in layer
         flat = store_letters_activations(layer_activations, layer_names,
                                          labels, b, flat)
         
@@ -262,35 +264,45 @@ def plot_letters_representations(opt):
         # Data to plot
         matrix = dist[layer]
         
-        # Modify so order of fonts is Braille - Line - Latin
+        # Re-arrange labels 
         
-
+        # Mask the lower triangle including the diagonal,
+        # to have cool trinagular matrix
+        mask = np.tri(*matrix.shape, dtype=bool, k=0) 
+        tri_matrix = np.where(mask, np.nan, matrix)
+        
         # Set specific and class labels
         repeated_labels = stim_labels * 3
 
         # Create new labels with sequence indicators
-        classes = ['LT', 'BR', 'LN']
+        classes = ['BR', 'LN', 'LT']
         new_labels = []
         for l in range(1):
             new_labels.extend([label for label in stim_labels])
                 
-        ax = sns.heatmap(matrix, 
+        ax = sns.heatmap(tri_matrix, 
                          cmap = 'viridis', 
                          annot = False, 
                          xticklabels = False, 
-                         yticklabels = False)
+                         yticklabels = False,
+                         cbar_kws={'location': 'top',
+                                   'orientation': 'horizontal',
+                                   'shrink': 0.5,
+                                   'aspect': 20,
+                                   'pad': 0.15})
 
         # Customize the heatmap
-        title = f'layer-{l}_{layer}'
-        ax.set_title(title, fontsize = 15, pad = 20)
+        # title = f'layer-{l}_{layer}'
+        # ax.set_title(title, fontsize = 15, pad = 20)
 
         # Add sequence indicators as subtitles for the axis
         for j, cla in enumerate(classes):
             
-            plt.text(-8, j*26 +13, cla, rotation = 0, fontsize = 12, verticalalignment = 'center')
-            plt.text(j*26 +13, 84, cla, rotation = 0, fontsize = 12, horizontalalignment = 'center')
+            plt.text(80, 26 * j + 13, cla, rotation = 0, fontsize = 20, verticalalignment = 'center', font = 'Avenir')
+            plt.text(26 * j + 13, -2, cla, rotation = 0, fontsize = 20, horizontalalignment = 'center', font = 'Avenir')
 
         ax.yaxis.set_tick_params(rotation = 0)
+        
         for label in ax.get_yticklabels():
             label.set_verticalalignment('center')
 
@@ -318,6 +330,121 @@ def plot_letters_representations(opt):
         plt.show()  
 
         
+## Do stats on the RDMs, correlate parts of matrices
+def stats_letters_representations(opt):
+    """
+    Do stats on the letters representations across layers
+    
+    Parameters
+    ----------
+    opt (dict): output of vbs_option() containing the paths of the IODA folder
+    
+    Outputs
+    -------
+    TBD
+    
+    """    
+    # Load distances in the representations
+    distances = load_extraction(os.path.join(opt['dir']['results'], 'letters',
+                                             'model-alexnet_sub-0_training-imagenet_test-letters_epoch-none_data-distances_method-euclidean.pkl'))
+    
+    # Load flat dictionary to get the keys, the labels of the stimuli
+    flat = load_extraction(os.path.join(opt['dir']['results'], 'letters', 
+                                        'model-alexnet_sub-0_training-imagenet_test-letters_epoch-none_data-flat-activations.pkl'))
+    layers = list(flat.keys())
+    scripts = ['BR'] * 26 + ['LN'] * 26 + ['LT'] * 26
+    
+    # Store groups and means for each layer
+    groups = {}
+    means = {}
+    
+    # Store results of comparisons
+    results = pd.DataFrame(columns = ['layer', 'group1', 'group2', 'diff', 'p_unc'])
+    
+    # For each layer
+    for l, layer in enumerate(layers):
+        
+        # Get the matrix to split into groups
+        dist_matrix = distances[layer]
+    
+        # Extract the matrix blocks: BR-BR, BR-LN, BR-LT, LN-LN, LN-LT, LT-LT
+        groups[layer] = defaultdict(list)
+
+        for i, j in combinations(range(len(scripts)), 2):
+            label_i = scripts[i]
+            label_j = scripts[j]
+
+            if label_i == label_j:
+                key = f"{label_i}_{label_j}"  # within-class (e.g., A_A)
+            else:
+                key = "_".join(sorted([label_i, label_j]))  # between-class (e.g., A_B, B_C)
+            
+            groups[layer][key].append(dist_matrix[i, j])
+
+        # Compute the mean dissimilarity for each block
+        means[layer] = {}
+        for key, values in groups[layer].items():
+            means[layer][key] = np.mean(values)
+        
+        # Run permutation test on the differences between dissimilarities 
+        keys = sorted(groups[layer].keys())
+    
+        diffs = []
+
+        # Browse through all the groups
+        for k1, k2 in combinations(keys, 2):
+                        
+            # Get the groups of distances
+            d1, d2 = groups[layer][k1], groups[layer][k2]
+            
+            # Initialize pseudorandom
+            rng = np.random.default_rng()
+            
+            # Compute combined array of distances
+            combined = np.array(d1 + d2)
+            labels = np.array([0]*len(d1) + [1]*len(d2))
+        
+            # Get actual difference between groups of distances
+            obs_diff = np.abs(np.mean(d1) - np.mean(d2))
+            
+            # Init null distribution
+            null_diffs = []
+        
+            # Get null distribution
+            for _ in range(10000):
+                rng.shuffle(labels)
+                group1 = combined[labels == 0]
+                group2 = combined[labels == 1]
+                null_diff = np.abs(np.mean(group1) - np.mean(group2))
+                null_diffs.append(null_diff)
+        
+            # Compute p-value based on null distribution
+            p_value = np.mean(np.array(null_diffs) >= obs_diff)
+            
+            # Append result to table
+            diffs.append({'layer': layer, 
+                          'group1': k1,
+                          'group2': k2,
+                          'diff': obs_diff,
+                          'p_unc': p_value})
+    
+        # Correct for multiple comparisons
+        pvals = [r['p_unc'] for r in diffs]
+        _, pvals_corr, _, _ = multipletests(pvals, method='fdr_bh')
+        for i, r in enumerate(diffs):
+            r['p_fdr'] = pvals_corr[i]
+            
+        # Add results to the table 
+        results = pd.concat([results, pd.DataFrame(diffs)], ignore_index = True)
+
+    # Save results table
+    results.to_csv(os.path.join(opt['dir']['results'], 'letters', 'model-alexnet_test-letters_analysis-permutation-test-rdms.csv'), 
+                   index = False)
+    
+    
+    
+    
+
 
 ### ---------------------------------------------------------------------------
 ### Extraction functions
@@ -485,14 +612,15 @@ def compute_letters_distances(activations, averages):
     # Latin alphabet - get the stimuli in each layer
     stim_names = list(averages[layer_names[0]].keys())
     
-    # Order names, just in case
-    stim_names = natsorted(stim_names)
+    # Rearragne letters list to separate scripts
+    order = {'F5': 0, 'F6': 1, 'F1': 2}
+    sorted_names = sorted(stim_names, key=lambda x: (order[x.split('_')[1]], x.split('_')[0]))
 
     # Loop through layers of the datasets
     for i, layer in enumerate(layer_names):
         
         # Get the number of stimuli
-        stim_nb = len(stim_names)
+        stim_nb = len(sorted_names)
 
         # Initiate a matrix of len(nb of stimuli) to store the RDM values
         matrix = np.full((stim_nb, stim_nb), np.nan)
@@ -501,7 +629,7 @@ def compute_letters_distances(activations, averages):
         stimuli = activations[layer]
 
         # Browse through stim A
-        for r, stim_a in enumerate(stim_names):
+        for r, stim_a in enumerate(sorted_names):
             
             # Iniitialize array with the different variations
             stim_a_variations = []
@@ -519,7 +647,7 @@ def compute_letters_distances(activations, averages):
                     var = var +1
 
             # Browse through stim B
-            for c, stim_b in enumerate(stim_names):
+            for c, stim_b in enumerate(sorted_names):
 
                 # Extract average activation
                 stim_b_average = averages[layer][stim_b]

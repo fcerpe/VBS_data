@@ -16,6 +16,8 @@ import pickle
 import zipfile
 import shutil
 import glob
+import csv
+from natsort import natsorted
 
 import pandas as pd
 
@@ -463,7 +465,126 @@ def create_dataset_LatinLine(opt):
     print("Images sorted into class folders, dataset is created. Enjoy!\n")
     
 
+## Create datasets to test the accuracy of the training
+# Maybe not needed
+def create_datasets_training_accuracy(opt): 
+    """
+    From LTBR and LTLN, pick the stimuli to use to test the accuracy during 
+    training. For the experiemtnal conditions (Braille and Line Braille), pick 
+    all the 1000 words in their variations. For Latin, pick Arial.
+    
+    Parameters
+    ----------
+    opt (dict): a dictionary storing the fullpath for folders
+    
+    Outputs
+    -------
+    None, datasets are saved in inputs/datasets, as LTBR_test and LTLN_test
 
+    """
+    
+    # Common operations
+    # Get the list of classes / words to create subfolders
+    words_path = os.path.join(opt['dir']['inputs'], 'words', 'nl_wordlist.csv')
+    words_classes = pd.read_csv(words_path, header = None, names = ['classes'])
+    
+    # LN - Notify the user
+    print("Creating the dataset of Latin words + Line Braille ...\n")
+    
+    # Get the images to sort into folders and the path to the dataset structure
+    stimuli_folder = os.path.join(opt['dir']['inputs'], 'datasets', 'LTLN')
+    dataset_folder = os.path.join(opt['dir']['inputs'], 'datasets', 'LTLN_test')
+    
+    # Unzip folders of the dataset
+    unzip_files(stimuli_folder)
+    
+    # Define the font IDs
+    scripts = ['_F1', '_F6']
+    
+    # Ensure destination folder exists
+    os.makedirs(dataset_folder, exist_ok = True)
+    
+    # Start list of stimuli in the set
+    stimuli_list = []
+    
+    # Iterate over each class name
+    for class_name in words_classes['classes']:
+        
+        # Find and move the images matching the class and script
+        for image_name in os.listdir(os.path.join(stimuli_folder, class_name)):
+            
+            # Check if the image starts with any allowed prefix and includes the class name
+            if any(image_name.startswith(class_name + script) for script in scripts):
+                
+                # Define source and destination paths
+                src_path = os.path.join(stimuli_folder, class_name, image_name)
+                dest_path = os.path.join(dataset_folder, image_name)
+                
+                # Add name of image to stimuli csv list
+                stimuli_list.append(image_name)
+                    
+                # Copy the image to the class folder
+                shutil.copy(src_path, dest_path)
+                
+    # Save stimuli list
+    with open('../../inputs/words/LTLN_test_stimuli.csv', mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['image_name'])  # header
+        for name in stimuli_list:
+            writer.writerow([name])
+                    
+    
+    # BR - Notify the user
+    print("Creating the dataset of Latin words + Braille ...\n")
+    
+    # Get the images to sort into folders and the path to the dataset structure
+    stimuli_folder = os.path.join(opt['dir']['inputs'], 'datasets', 'LTBR')
+    dataset_folder = os.path.join(opt['dir']['inputs'], 'datasets', 'LTBR_test')
+    
+    # Unzip folders of the dataset
+    unzip_files(stimuli_folder)
+    
+    # Define the font IDs
+    scripts = ['_F1', '_F5']
+    
+    # Ensure destination folder exists
+    os.makedirs(dataset_folder)
+    
+    # Start list of stimuli in the set
+    stimuli_list = []
+
+    # Iterate over each class name
+    for class_name in words_classes['classes']:
+        
+        # Find and move the images matching the class and script
+        for image_name in os.listdir(os.path.join(stimuli_folder, class_name)):
+            
+            # Check if the image starts with any allowed prefix and includes the class name
+            if any(image_name.startswith(class_name + script) for script in scripts):
+                
+                # Define source and destination paths
+                src_path = os.path.join(stimuli_folder, class_name, image_name)
+                dest_path = os.path.join(dataset_folder, image_name)
+                
+                # Add name of image to stimuli csv list
+                stimuli_list.append(image_name)
+                    
+                # Copy the image to the class folder
+                shutil.copy(src_path, dest_path)
+                
+    # Save stimuli list
+    with open('../../inputs/words/LTBR_test_stimuli.csv', mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['image_name'])  # header
+        for name in stimuli_list:
+            writer.writerow([name])
+        
+
+    # Notify the user
+    print("Images sorted into class folders, dataset is created. Enjoy!\n")
+    
+    
+    
 ### ---------------------------------------------------------------------------
 ### Zipping / unzipping of dataset and subfolders
 
@@ -682,9 +803,24 @@ def resize_stimuli(target_size, folder, move):
                 shutil.move(file_path, latin_path)
 
 
+## make list of stimuli from image folder
+def make_stimuli_list(path, output):
+    
+    # Set the name and path of the output file
+    output_csv = f'../../inputs/words/{output}.csv'
 
-
-
+    # Get list of .png files and drop the extension
+    image_files = [os.path.splitext(f)[0] for f in os.listdir(path) if f.lower().endswith('.png')]
+    
+    # Natural sort
+    sorted_images = natsorted(image_files)
+    
+    # Save to CSV
+    with open(output_csv, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(['Stimulus'])  # header
+        for name in sorted_images:
+            writer.writerow([name])
 
 
 

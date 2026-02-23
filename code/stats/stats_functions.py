@@ -15,6 +15,7 @@ import sys
 sys.path.append('../')
 
 import os
+import re
 
 import pandas as pd
 import numpy as np
@@ -22,7 +23,9 @@ import pingouin as pg
 
 from scipy.stats import pearsonr
 from collections import defaultdict
-from statsmodels.stats.multitest import fdrcorrection
+from natsort import natsorted
+from statsmodels.stats.multitest import *
+from typing import Optional, List
 
 import rpy2.robjects as robjects
 from rpy2.robjects import pandas2ri
@@ -35,6 +38,182 @@ from src.vbs_functions import *
 
 ### ---------------------------------------------------------------------------
 ### Main statistical analyses 
+
+## Compute ANOVA on clustering, for features layers 
+def stats_compare_trainings(opt, model_name, test): 
+    """
+    Compute descriptive statistics and rmANOVA for the clustering across 
+    subjets and layers
+    
+    Parameters
+    ----------
+    opt (dict): output of vbs_option() containing the paths of the IODA folder 
+    
+    model_name (str): the model refernce (whether 'alexnet' or 'cornet') to 
+                         load the correct activations and to save the reuslts properly
+                         
+    test (str): the expertiment that is being analysed (VBE or VBT)
+
+    Outputs
+    -------
+    None, but stats csv files are created in outputs/results/clustering
+
+    """
+    
+    # Will extract results from both novel script trainings, to compare them
+    if model_name == 'alexnet': trainings = ['LTBR', 'LTLN']
+    elif model_name == 'cornet': trainings = ['LT', 'LTBR', 'LTLN']
+    else: print('model not recognized') 
+    
+    # Initialize table with results across subjects, epochs
+    # It contains columns for: model, training, subject, epoch, script, word, score
+    results = pd.DataFrame(columns = ['model_name', 
+                                      'training', 
+                                      'subject', 
+                                      'epoch', 
+                                      'script', 
+                                      'word', 
+                                      'score'])
+    
+    # Extract results for both trainings
+    for tr in trainings: 
+
+        # Browse each subject
+        for s, subject in enumerate(opt['subjects']):
+            
+            # Find in outputs/results/classifications all the pickle files corresponding
+            # to a subject, training, test. They will represent different epochs
+            epochs = find_epoch_files(os.path.join(opt['dir']['results'], 'classifications'),
+                                      model_name, str(s), tr, test, 'corrected-responses')
+            epochs = natsorted(epochs)
+            
+            # Load all the epochs relative to that subject
+            for e, ep in enumerate(epochs):
+                
+                # Extract epoch number
+                epoch = epochs[e].split('epoch-')[1]
+                epoch = epoch.split('_')[0]
+                
+                # Specify the file to extract and load it 
+                filepath = os.path.join(opt['dir']['results'], 'classifications', epochs[e])
+                responses = load_extraction(filepath)
+                
+                # Add data to the table
+                # Build rows and append to the DataFrame
+                rows = []
+                for script, words in responses.items():
+                    for word, score in words.items():
+                        row = {'model_name': model_name,
+                               'training': tr,
+                               'subject': subject,
+                               'epoch': epoch,
+                               'script': script,
+                               'word': word,
+                               'score': score}
+                        rows.append(row)
+                
+                # Append all rows to main results
+                results = pd.concat([results, pd.DataFrame(rows)], ignore_index = True)
+
+    # Average the results for each subject
+    averages = results.groupby(['model_name', 'training', 'subject', 'epoch', 'script'], 
+                               as_index = False)['score'].mean()
+    
+    # Sort epochs naturally
+    averages = averages.sort_values(by=['model_name', 'training', 'subject', 'epoch', 'script'],
+                                key=lambda col: col if col.name != 'epoch' else col.astype(int))
+    
+    # Initialize basci filename for all the stats
+    filename = f'model-{model_name}_sub-all_training-all_test-{test}_epoch-all'
+    
+    # Save results and averages tables
+    results.to_csv(os.path.join(opt['dir']['results'], 
+                                'classifications', 
+                                f'{filename}_data-corrected-responses.csv'), index = False)
+    
+    averages.to_csv(os.path.join(opt['dir']['results'], 
+                                 'classifications', 
+                                 f'{filename}_data-averaged-responses.csv'), index = False)
+    
+    # Compute stats on the performances for BR and LN at different epochs
+    # Not on the main distribution at all the epochs, but only on selected moments
+    
+    # Bind subject and training in one variable, to distinguish "participants"
+    averages['cluster'] = averages['training'].astype(str) + '-' + averages['subject'].astype(str)
+
+    # If AlexNet, we already know that performance is perferct. We mostly care 
+    # about the novel scripts. 
+    # Still TBD in CORnet
+    averages = averages[(averages['model_name'] == model_name) & (averages['script'] != 'LT')]
+    
+    # Main differences in the curves
+    # rmANOVA
+    anova = pg.mixed_anova(dv = 'score', 
+                           within = 'epoch', 
+                           between = 'script', 
+                           subject = 'cluster',
+                           data = averages)
+    
+    # Post-hoc t-tests on the curves
+    
+    # Get the number of sessions (unique days)
+    nbEpochs = len(averages['epoch'].unique().tolist())
+    
+    # Perform t-tests on the script diffrences across sessions
+    # (one t-test per session)
+    sessions = []
+    ttests = []
+    dofs = []
+    pvals = []
+    
+    for i in range(1, nbEpochs+1):
+        
+        # Small hack: if we are working on only three sessions, add 1 to the session number
+        if model_name == 'alexnet': i = i+10
+        
+        session_col = f'epoch-{i}'
+        
+        # Select data for BR, LN scripts for the current session column
+        results_BR = averages[(averages['script'] == 'BR') & (averages['epoch'] == str(i))]['score']
+        results_LN = averages[(averages['script'] == 'LN') & (averages['epoch'] == str(i))]['score']
+        
+        # Perform t-test between br and cb scripts for the given session
+        result = pg.ttest(results_BR, 
+                          results_LN, 
+                          paired = False, 
+                          alternative = 'two-sided', 
+                          correction = False, 
+                          r = 0.707, 
+                          confidence = 0.95)
+            
+        # Store the results
+        sessions.append(session_col)
+        ttests.append(result['T'][0])
+        pvals.append(result['p-val'][0])
+        dofs.append(result['dof'][0])
+    
+    # Apply Bonferroni correction to the p-values
+    _, bonf_pvals, _, _ = multipletests(pvals, alpha = 0.05, method = 'bonferroni')
+    
+    # Create a DataFrame with the results
+    ttest_results = pd.DataFrame({
+        'session': sessions,
+        't_statistic': ttests,
+        'deg_freedom': dofs,
+        'p_value': pvals,
+        'bonferroni_p_value': bonf_pvals
+    })
+    
+    # Save stats for plotting 
+    anova.to_csv(os.path.join(opt['dir']['results'], 
+                                    'classifications', 
+                                    f'{filename}_analysis-rmanova.csv'), index = False)
+    
+    ttest_results.to_csv(os.path.join(opt['dir']['results'], 
+                                      'classifications', 
+                                      f'{filename}_analysis-posthoc-ttests.csv'), index = False)
+
+
 
 ## Measure clustering across RDMs of a network and script 
 def stats_clustering(opt, model_name, training, test, method):
@@ -365,7 +544,6 @@ def stats_correlate_distances(opt, distances_experts, distances_controls):
 
     # Save results 
     results.to_csv(os.path.join(opt['dir']['results'], 'distances', savename), index = False)
-
 
 
 ## Correlate clusters with language model
@@ -837,6 +1015,37 @@ def compute_permutations(subject, model, permutations):
         null_distribution[i], _ = pearsonr(subject_permuted, model)
 
     return null_distribution
+
+
+## Find files for multiple epochs
+def find_epoch_files(folder, model_name, subject, training, test, data): 
+    """
+    Search for files matching a specific pattern in the given folder.
+    
+    Parameters:
+        folder (str): Path to the folder.
+        m, s, tr, te, e, d (Optional[str]): Filter values for model, subject, training, test, epoch, and data.
+
+    Returns:
+        List[str]: List of matching filenames.
+    """
+    def val_or_wildcard(val):
+        
+        # Escape dashes to match literally, since dash can be special in regex
+        return re.escape(val) if val is not None else r"[^_]+"
+
+    epoch = None
+
+    pattern = (rf"model-{val_or_wildcard(model_name)}_"
+               rf"sub-{val_or_wildcard(subject)}_"
+               rf"training-{val_or_wildcard(training)}_"
+               rf"test-{val_or_wildcard(test)}_"
+               rf"epoch-{val_or_wildcard(epoch)}_"
+               rf"data-{val_or_wildcard(data)}\.pkl")
+
+    regex = re.compile(pattern)
+
+    return [f for f in os.listdir(folder) if regex.fullmatch(f)]
 
 
 
